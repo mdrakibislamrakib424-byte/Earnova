@@ -5,13 +5,13 @@
 // measurementId আলাদাভাবে লাগবে — Firebase Console → Project settings →
 // General → "Your apps" → Web app → measurementId (analytics enable করা থাকলে)
 const ANALYTICS_CONFIG = {
-  apiKey: 'PASTE_YOUR_FIREBASE_API_KEY_HERE',
-  authDomain: 'PASTE_YOUR_PROJECT.firebaseapp.com',
-  projectId: 'PASTE_YOUR_PROJECT_ID',
-  storageBucket: 'PASTE_YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'PASTE_YOUR_SENDER_ID',
-  appId: 'PASTE_YOUR_FIREBASE_APP_ID',
-  measurementId: 'PASTE_YOUR_MEASUREMENT_ID_HERE',
+  apiKey: 'AIzaSyAd4bVUjuvIC7P30og4UckLbCcCNB0VuR8',
+  authDomain: 'earnova-9cf91.firebaseapp.com',
+  projectId: 'earnova-9cf91',
+  storageBucket: 'earnova-9cf91.firebasestorage.app',
+  messagingSenderId: '1040669106457',
+  appId: '1:1040669106457:web:7c8553740da017c0b2e588',
+  measurementId: 'G-F8YCGRDQ7M',
 };
 
 let _analytics = null;
