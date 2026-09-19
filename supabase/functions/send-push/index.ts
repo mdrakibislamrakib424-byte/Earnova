@@ -6,7 +6,7 @@
 // আবার লেখা হয়েছে। কাজ একদম একই: Supabase থেকে ইউজারের push token
 // পড়ে, notification preference চেক করে, Google FCM দিয়ে push পাঠায়।
 
-import { serve } from 'https://deno.land/std@0.203.0/http/server.ts';
+import { serve } from 'https://esm.sh/std@0.203.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getAccessToken, sendToManyTokens, type ServiceAccount } from '../_shared/fcm.ts';
 
