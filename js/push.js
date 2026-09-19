@@ -2,14 +2,14 @@
 // ⚠️ Firebase Console → Project settings → General → "Your apps" → Web app থেকে config নিন
 // এবং Cloud Messaging ট্যাব থেকে VAPID key (Web Push certificate) নিন
 const FCM_CONFIG = {
-  apiKey: 'PASTE_YOUR_FIREBASE_API_KEY_HERE',
-  authDomain: 'PASTE_YOUR_PROJECT.firebaseapp.com',
-  projectId: 'PASTE_YOUR_PROJECT_ID',
-  storageBucket: 'PASTE_YOUR_PROJECT.appspot.com',
-  messagingSenderId: 'PASTE_YOUR_SENDER_ID',
-  appId: 'PASTE_YOUR_FIREBASE_APP_ID',
+  apiKey: 'AIzaSyAd4bVUjuvIC7P30og4UckLbCcCNB0VuR8',
+  authDomain: 'earnova-9cf91.firebaseapp.com',
+  projectId: 'earnova-9cf91',
+  storageBucket: 'earnova-9cf91.firebasestorage.app',
+  messagingSenderId: '1040669106457',
+  appId: '1:1040669106457:web:7c8553740da017c0b2e588',
 };
-const FCM_VAPID_KEY = 'PASTE_YOUR_WEB_PUSH_VAPID_KEY_HERE';
+const FCM_VAPID_KEY = 'BCBwqJ4IXFjy3BzgP_dhjDnTvgIYLthf4CrQBHvf0omGj7EkoSTTQROjo8ELYGc_8JQyko61ejwVZhtqYxEvCAo';
 
 // Admin push পাঠানো হয় নিজের FCM REST key দিয়ে সরাসরি ব্রাউজার থেকে সম্ভব না
 // (FCM v1 API-তে OAuth লাগে), তাই একটা ছোট Edge Function endpoint ব্যবহার করা হয়েছে।
