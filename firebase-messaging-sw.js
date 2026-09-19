@@ -6,12 +6,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey:            'PASTE_YOUR_FIREBASE_API_KEY_HERE',
-  authDomain:        'PASTE_YOUR_PROJECT_ID.firebaseapp.com',
-  projectId:         'PASTE_YOUR_PROJECT_ID',
-  storageBucket:     'PASTE_YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'PASTE_YOUR_SENDER_ID',
-  appId:             'PASTE_YOUR_FIREBASE_APP_ID',
+  apiKey:            'AIzaSyAd4bVUjuvIC7P30og4UckLbCcCNB0VuR8',
+  authDomain:        'earnova-9cf91.firebaseapp.com',
+  projectId:         'earnova-9cf91',
+  storageBucket:     'earnova-9cf91.firebasestorage.app',
+  messagingSenderId: '1040669106457',
+  appId:             '1:1040669106457:web:7c8553740da017c0b2e588',
 });
 
 const messaging = firebase.messaging();
