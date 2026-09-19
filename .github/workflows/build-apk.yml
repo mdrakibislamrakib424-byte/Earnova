@@ -1,0 +1,105 @@
+name: 🚀 Build EARNOVA APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: ⬇️ Checkout
+        uses: actions/checkout@v4
+
+      - name: 🟢 Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: ☕ Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 📱 Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: 📦 npm install
+        run: npm install
+
+      - name: 🔨 Build www/ (index.html + sw.js কপি করা)
+        run: node scripts/build.js
+
+      # ⚠️ এই স্টেপটা আগে ছিল না — এটা ছাড়া android/ ফোল্ডারই তৈরি হয় না,
+      # ফলে পুরো build fail করত। প্রথমবার android/ না থাকলে বানাবে,
+      # পরের রানে থাকলে (repo-তে কমিট করা থাকলে) আবার বানাবে না।
+      - name: ➕ Add Android platform (প্রথমবার)
+        run: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
+      # ⚠️ এই স্টেপটাও আগে ছিল না — এটা ছাড়া resources/icon.png ও
+      # resources/splash.png শুধু ফোল্ডারে পড়েই থাকত, আসল APK-তে কখনো
+      # ব্যবহার হতো না (Capacitor-এর ডিফল্ট নীল লোগোই দেখাত)। এই স্টেপ
+      # সেই ছবি দুটো থেকে Android-এর সব DPI সাইজের launcher icon ও
+      # splash screen resource অটো-জেনারেট করে দেয়।
+      - name: 🎨 Generate native icon & splash screen
+        run: npx @capacitor/assets generate --android
+
+      - name: 🔄 Capacitor sync
+        run: npx cap sync android
+
+      # ⚠️ এই স্টেপটাও আগে ছিল না — google-services.json ছাড়া নেটিভ FCM push
+      # কাজ করবে না। Firebase Console → Project Settings → General →
+      # Android app যোগ করুন (package: com.earnova.app) → এই ফাইল ডাউনলোড
+      # করে GitHub Secret এ পুরো কনটেন্ট বসান (নাম: GOOGLE_SERVICES_JSON)
+      - name: 🔥 Add google-services.json (FCM config)
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "⚠️ GOOGLE_SERVICES_JSON secret নেই — push notification কাজ করবে না, build তবু চলবে।"
+          fi
+
+      - name: ⚙️ Enable Google Services gradle plugin
+        run: |
+          if ! grep -q "com.google.gms:google-services" android/build.gradle; then
+            sed -i "s/dependencies {/dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'/" android/build.gradle
+          fi
+          if ! grep -q "com.google.gms.google-services" android/app/build.gradle; then
+            echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+          fi
+
+      - name: 🔑 Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/earnova.keystore
+
+      - name: 🏗️ Build Release APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/android/app/earnova.keystore \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASS }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASS }}
+
+      - name: 📤 Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EARNOVA-v${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 30
+
+      - name: 🎉 GitHub Release (tag push হলে)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/app-release.apk

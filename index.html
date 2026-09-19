@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" id="HR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#2563eb">
+<title>EARNOVA — Earn Real Money Online</title>
+
+<!-- App Icon — নেটিভ Android App icon (adaptive icon) android/ ফোল্ডারে আলাদাভাবে সেট হয়,
+     এটা শুধু WebView-এর ভেতরের ট্যাব/preview আইকনের জন্য -->
+<link rel="icon" type="image/png" href="icon.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- AdMob ব্যানার/ইন্টারস্টিশিয়াল/রিওয়ার্ডেড অ্যাড সেটআপ ফাইলের একদম শেষে (</body> এর আগে) করা হয়েছে -->
+
+<!-- LIVE TICKER -->
+<div id="liveTicker" style="display:none;background:linear-gradient(90deg,#1e40af,#065f46);color:#fff;font-size:11px;font-weight:600;padding:6px 0;text-align:center;overflow:hidden;white-space:nowrap;position:relative;z-index:5">
+  <span id="tickerText" style="display:inline-block;animation:tickerMove 18s linear infinite">🌍 Welcome to EARNOVA — Earn Real Money Online!</span>
+</div>
+
+<!-- TOAST BOX -->
+<div id="toastBox"></div>
+
+<!-- LOADER -->
+<div id="ldr">
+  <div class="ldr-logo">◆</div>
+  <div class="ldr-brand">EARNOVA</div>
+  <div class="ldr-tag">Earn Real Money Online</div>
+  <div class="ldr-bar-wrap"><div class="ldr-bar"></div></div>
+  <div class="sl-t" id="ldrMsg">Initializing secure connection…</div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app" style="display:none"></div>
+
+<!-- CORNER COUNTDOWN -->
+<div id="cc"></div>
+
+<!-- AD MODAL (No close button — user MUST wait 10s) -->
+<div id="adm">
+  <svg class="grad"><defs>
+    <linearGradient id="adGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/><stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs></svg>
+  <div class="arm">
+    <svg class="ring" width="120" height="120" viewBox="0 0 120 120">
+      <circle class="trk" cx="60" cy="60" r="55"/>
+      <circle class="prg" id="adRing" cx="60" cy="60" r="55"/>
+    </svg>
+    <div class="arm-n" id="adNum">8</div>
+  </div>
+  <div class="ad-ttl" id="adTtl">📺 Ad is Playing</div>
+  <div class="ad-sub" id="adSub">Please wait — you cannot skip this ad</div>
+  <div class="ad-prg">
+    <div class="ad-prg-lb"><span id="adPLb">seconds remaining</span><span id="adPCt" style="color:#60a5fa;font-weight:700"></span></div>
+    <div class="prb"><div class="prf" id="adPBar" style="width:0%"></div></div>
+  </div>
+  <div class="ad-warn" id="adWarn">🚫 Do not close this page! Stay here for 8 seconds.</div>
+</div>
+
+<!-- NOTICE MODAL -->
+<div id="nm">
+  <div class="nmc">
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:11px" id="nmTtl">📢 Notice</div>
+    <div style="font-size:14px;color:#94a3b8;line-height:1.68;margin-bottom:13px" id="nmTxt"></div>
+    <div style="font-size:11px;color:#334155;margin-bottom:16px" id="nmDt"></div>
+    <button class="btn bp" onclick="EZ.closeNM()"><span id="nmOk">Got it</span> ✓</button>
+  </div>
+</div>
+
+<!-- LANGUAGE MODAL -->
+<div id="lm" onclick="EZ.closeLM()">
+  <div class="lmc" onclick="event.stopPropagation()">
+    <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:700;text-align:center;margin-bottom:18px" id="lmTtl">🌐 Choose Language</div>
+    <div class="lgd" id="lgd"></div>
+    <button class="btn bh mt16" onclick="EZ.closeLM()">✕ Close</button>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="tc"></div>
+
+<!-- Firebase Cloud Messaging (FCM) Web SDK — ব্রাউজার/PWA push এর জন্য।
+     নেটিভ Android APK এর ভেতরে push আসবে Capacitor PushNotifications প্লাগিন
+     (native FCM) দিয়ে — window.Capacitor.Plugins.PushNotifications দিয়ে কাজ করে,
+     আলাদা কোনো <script> ট্যাগ লাগে না, GitHub Actions বিল্ডে নিজে থেকেই bundle হয়ে যায়। -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-analytics-compat.js"></script>
+
+<!-- Supabase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<script src="js/config.js"></script>
+<script src="js/lang.js"></script>
+<script src="js/utils-offers.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/db.js"></script>
+<script src="js/pages-core.js"></script>
+<script src="js/pages-offers.js"></script>
+<script src="js/pages-other.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/app-events.js"></script>
+<script src="js/push.js"></script>
+<script src="js/features.js"></script>
+
+<!-- AdMob Ads — Google AdMob শুধু নেটিভ Android/iOS app এর ভেতরে কাজ করে (সাধারণ
+     ওয়েবসাইট JS tag হিসেবে চলে না), তাই এখানে Capacitor AdMob প্লাগিন দিয়ে
+     নেটিভ ব্যানার/ইন্টারস্টিশিয়াল/রিওয়ার্ডেড অ্যাড দেখানো হচ্ছে।
+     ⚠️ নিচের placeholder ID গুলো নিজের AdMob Ad Unit ID দিয়ে বদলে দিন
+     (admob.google.com → Apps → Ad units). ব্রাউজারে টেস্ট করার সময় এই ব্লক
+     কিছু দেখাবে না — শুধু বিল্ড হওয়া APK-তে দেখাবে। -->
+<div id="admob-banner-slot" style="width:100%;min-height:0"></div>
+<script src="js/ads.js"></script>
+</body>
+</html>

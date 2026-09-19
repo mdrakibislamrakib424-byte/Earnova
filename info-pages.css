@@ -1,0 +1,83 @@
+/* EARNOVA — Static Info Pages (Terms/Privacy/About/Contact/Services/Support)
+   অ্যাপের মূল style.css এর সাথে মিলিয়ে বানানো — একই রং, একই ফন্ট */
+
+*,::before,::after{margin:0;padding:0;box-sizing:border-box}
+html,body{background:#f0f7ff;color:#0F172A;font-family:'DM Sans',sans-serif;min-height:100%}
+.sf{font-family:'Syne',sans-serif!important}
+
+.ip-topbar{
+  position:sticky;top:0;z-index:10;
+  background:linear-gradient(135deg,#2563eb,#059669);
+  padding:16px 18px;display:flex;align-items:center;gap:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,.12);
+}
+.ip-back{
+  width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  text-decoration:none;font-size:18px;flex-shrink:0;
+}
+.ip-topbar h1{color:#fff;font-size:16px;font-weight:800;font-family:'Syne',sans-serif}
+
+.ip-wrap{max-width:640px;margin:0 auto;padding:22px 18px 60px}
+
+.ip-hero{
+  text-align:center;padding:18px 10px 26px;
+}
+.ip-hero .ip-icon{
+  width:64px;height:64px;border-radius:18px;margin:0 auto 14px;
+  background:linear-gradient(135deg,#2563eb,#059669);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;box-shadow:0 8px 24px rgba(37,99,235,.25);
+}
+.ip-hero h2{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#0F172A;margin-bottom:8px}
+.ip-hero p{font-size:13px;color:#64748b;line-height:1.6}
+
+.ip-card{
+  background:#fff;border:1.5px solid #e0eaff;border-radius:16px;
+  padding:20px;margin-bottom:14px;
+}
+.ip-card h3{
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#2563eb;
+  margin-bottom:10px;display:flex;align-items:center;gap:8px;
+}
+.ip-card p, .ip-card li{font-size:13px;color:#334155;line-height:1.75}
+.ip-card ul, .ip-card ol{padding-left:20px;margin-top:6px}
+.ip-card li{margin-bottom:6px}
+.ip-card strong{color:#0F172A}
+.ip-card a{color:#2563eb;font-weight:700;text-decoration:none}
+
+.ip-updated{
+  text-align:center;font-size:11px;color:#94a3b8;margin:18px 0 6px;
+}
+
+.ip-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+@media(max-width:420px){.ip-grid{grid-template-columns:1fr}}
+.ip-feature{
+  background:#fff;border:1.5px solid #e0eaff;border-radius:16px;padding:18px 14px;text-align:center;
+}
+.ip-feature .ip-femoji{font-size:26px;margin-bottom:8px}
+.ip-feature h4{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin-bottom:4px}
+.ip-feature p{font-size:11.5px;color:#64748b;line-height:1.5}
+
+.ip-contact-btn{
+  display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid #e0eaff;
+  border-radius:14px;padding:16px;margin-bottom:12px;text-decoration:none;color:inherit;
+}
+.ip-contact-btn .ip-cico{
+  width:42px;height:42px;border-radius:12px;background:rgba(37,99,235,.1);
+  display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;
+}
+.ip-contact-btn .ip-ctxt{flex:1}
+.ip-contact-btn .ip-ctxt b{display:block;font-size:13px;color:#0F172A;margin-bottom:2px}
+.ip-contact-btn .ip-ctxt span{font-size:12px;color:#64748b}
+.ip-contact-btn .ip-carrow{color:#94a3b8;font-size:14px}
+
+.ip-faq-q{
+  background:#fff;border:1.5px solid #e0eaff;border-radius:14px;padding:16px;margin-bottom:10px;
+}
+.ip-faq-q b{display:block;font-size:13px;color:#0F172A;margin-bottom:6px}
+.ip-faq-q p{font-size:12.5px;color:#64748b;line-height:1.65}
+
+body.dark{background:#0b1220}
+body.dark .ip-card,body.dark .ip-feature,body.dark .ip-contact-btn,body.dark .ip-faq-q{background:#111a2e;border-color:#1e293b}
+body.dark .ip-hero h2,body.dark .ip-contact-btn .ip-ctxt b,body.dark .ip-faq-q b{color:#f1f5f9}
