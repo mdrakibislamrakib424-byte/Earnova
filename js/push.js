@@ -15,8 +15,8 @@ const FCM_VAPID_KEY = 'BCBwqJ4IXFjy3BzgP_dhjDnTvgIYLthf4CrQBHvf0omGj7EkoSTTQROjo
 // (FCM v1 API-তে OAuth লাগে), তাই একটা ছোট Edge Function endpoint ব্যবহার করা হয়েছে।
 // এই ফাংশনটা supabase/functions/send-push/index.ts এ আছে, deploy করে এখানে URL বসান
 // (বিস্তারিত ধাপ: supabase/PUSH_SETUP.md)।
-const FCM_SEND_ENDPOINT = 'PASTE_YOUR_SUPABASE_EDGE_FUNCTION_URL_HERE'; // যেমন: https://xxxxxxxx.supabase.co/functions/v1/send-push
-const FCM_ADMIN_SECRET  = 'PASTE_A_LONG_RANDOM_SECRET_HERE';    // supabase/functions/send-push/index.ts এর ADMIN_SECRET Secret-এর সাথে মিলতে হবে
+const FCM_SEND_ENDPOINT = 'https://oazyvgjixljdnjhorasa.supabase.co/functions/v1/send-push'; // যেমন: https://xxxxxxxx.supabase.co/functions/v1/send-push
+const FCM_ADMIN_SECRET  = '22222222222222222222';    // supabase/functions/send-push/index.ts এর ADMIN_SECRET Secret-এর সাথে মিলতে হবে
 
 let fcmApp = null, fcmMessaging = null;
 const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
