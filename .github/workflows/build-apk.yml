@@ -62,13 +62,25 @@ jobs:
             echo "⚠️ GOOGLE_SERVICES_JSON secret নেই — push notification কাজ করবে না, build তবু চলবে।"
           fi
 
-      - name: ⚙️ Enable Google Services gradle plugin
+      - name: ⚙️ Enable Google Services + Crashlytics gradle plugin
         run: |
-          if ! grep -q "com.google.gms:google-services" android/build.gradle; then
-            sed -i "s/dependencies {/dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'/" android/build.gradle
-          fi
-          if ! grep -q "com.google.gms.google-services" android/app/build.gradle; then
-            echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+          if [ -f "android/app/google-services.json" ]; then
+            if ! grep -q "com.google.gms:google-services" android/build.gradle; then
+              sed -i "s/dependencies {/dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'\n        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.2'/" android/build.gradle
+            fi
+            if ! grep -q "com.google.gms.google-services" android/app/build.gradle; then
+              echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
+              echo "apply plugin: 'com.google.firebase.crashlytics'" >> android/app/build.gradle
+            fi
+            if ! grep -q "firebase-crashlytics" android/app/build.gradle; then
+              echo "" >> android/app/build.gradle
+              echo "dependencies {" >> android/app/build.gradle
+              echo "    implementation platform('com.google.firebase:firebase-bom:33.5.1')" >> android/app/build.gradle
+              echo "    implementation 'com.google.firebase:firebase-crashlytics'" >> android/app/build.gradle
+              echo "}" >> android/app/build.gradle
+            fi
+          else
+            echo "⚠️ google-services.json নেই — Google Services/Crashlytics প্লাগিন স্কিপ করা হলো।"
           fi
 
       - name: 🔑 Decode keystore
