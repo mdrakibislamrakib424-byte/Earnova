@@ -1,11 +1,11 @@
  name: 🚀 Build EARNOVA APK
 
  on:
-  push:
+   push:
     branches: [main]
   workflow_dispatch:
 
-jobs:
+ jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
