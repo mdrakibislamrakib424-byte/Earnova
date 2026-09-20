@@ -1,7 +1,7 @@
 const ADMOB_APP_ID              = 'ca-app-pub-1093580583332518~8050365428';               // ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY
 const ADMOB_BANNER_UNIT_ID      = 'ca-app-pub-1093580583332518/6049878887';     // ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY
 const ADMOB_INTERSTITIAL_UNIT_ID= 'ca-app-pub-1093580583332518/3122217233';
-const ADMOB_REWARDED_UNIT_ID    = 'PASTE_YOUR_ADMOB_REWARDED_AD_UNIT_ID_HERE';
+const ADMOB_REWARDED_UNIT_ID    = 'ca-app-pub-1093580583332518/2769109424';
 // টেস্টের জন্য Google-এর অফিসিয়াল টেস্ট ID ব্যবহার করতে পারেন যতক্ষণ না নিজের ID বসান:
 // banner: ca-app-pub-3940256099942544/6300978111
 // interstitial: ca-app-pub-3940256099942544/1033173712
