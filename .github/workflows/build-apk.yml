@@ -51,6 +51,34 @@ jobs:
       - name: 🔄 Capacitor sync
         run: npx cap sync android
 
+      # ⚠️ ফিক্স — এই ধাপটা ছাড়া AdMob App ID শুধু capacitor.config.json এ
+      # থাকলেই যথেষ্ট না — AndroidManifest.xml এ সরাসরি একটা নির্দিষ্ট লাইন
+      # না থাকলে অ্যাপ চালু হওয়ার সাথে সাথেই ক্র্যাশ করে (এটাই আসল কারণ
+      # ছিল)। এই ধাপ capacitor.config.json থেকে আসল App ID পড়ে
+      # AndroidManifest.xml এ নিজে থেকেই বসিয়ে দেয়, প্রতিটা build এ।
+      - name: 📢 Inject AdMob App ID into AndroidManifest.xml
+        run: |
+          python3 << 'PYEOF'
+          import json, re
+          with open('capacitor.config.json') as f:
+              cfg = json.load(f)
+          app_id = cfg.get('plugins', {}).get('AdMob', {}).get('appId', '')
+          if not app_id or 'PASTE_YOUR' in app_id:
+              print("⚠️ capacitor.config.json এ সঠিক AdMob App ID পাওয়া যায়নি — এই ধাপ স্কিপ করা হলো, অ্যাপ ক্র্যাশ করতে পারে।")
+          else:
+              path = 'android/app/src/main/AndroidManifest.xml'
+              with open(path) as f:
+                  content = f.read()
+              meta_tag = f'<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="{app_id}"/>'
+              if 'com.google.android.gms.ads.APPLICATION_ID' not in content:
+                  content = re.sub(r'(<application[^>]*>)', r'\1\n        ' + meta_tag, content, count=1)
+                  with open(path, 'w') as f:
+                      f.write(content)
+                  print(f"✅ AdMob App ID ({app_id}) AndroidManifest.xml এ যোগ করা হলো")
+              else:
+                  print("ℹ️ AdMob App ID meta-data ইতিমধ্যেই আছে, স্কিপ করা হলো")
+          PYEOF
+
       # FCM push এর জন্য: GitHub Secret নাম GOOGLE_SERVICES_JSON
       - name: 🔥 Add google-services.json (FCM config)
         env:
