@@ -1,16 +1,16 @@
- name: 🚀 Build EARNOVA APK
+name: 🚀 Build EARNOVA APK
 
- on:
-   push:
+on:
+  push:
     branches: [main]
-   workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
     steps:
-    
+
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
 
@@ -27,9 +27,9 @@ jobs:
           distribution: 'temurin'
 
       - name: 📱 Android SDK
-       uses: android-actions/setup-android@v4
-       with:
-         packages: 'platform-tools'
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: 📦 npm install
         run: npm install
@@ -37,30 +37,21 @@ jobs:
       - name: 🔨 Build www/ (index.html + sw.js কপি করা)
         run: node scripts/build.js
 
-      # ⚠️ এই স্টেপটা আগে ছিল না — এটা ছাড়া android/ ফোল্ডারই তৈরি হয় না,
-      # ফলে পুরো build fail করত। প্রথমবার android/ না থাকলে বানাবে,
-      # পরের রানে থাকলে (repo-তে কমিট করা থাকলে) আবার বানাবে না।
+      # android/ ফোল্ডার না থাকলে বানাবে
       - name: ➕ Add Android platform (প্রথমবার)
         run: |
           if [ ! -d "android" ]; then
             npx cap add android
           fi
 
-      # ⚠️ এই স্টেপটাও আগে ছিল না — এটা ছাড়া resources/icon.png ও
-      # resources/splash.png শুধু ফোল্ডারে পড়েই থাকত, আসল APK-তে কখনো
-      # ব্যবহার হতো না (Capacitor-এর ডিফল্ট নীল লোগোই দেখাত)। এই স্টেপ
-      # সেই ছবি দুটো থেকে Android-এর সব DPI সাইজের launcher icon ও
-      # splash screen resource অটো-জেনারেট করে দেয়।
+      # resources/icon.png ও splash.png থেকে সব DPI-র icon/splash বানাবে
       - name: 🎨 Generate native icon & splash screen
         run: npx @capacitor/assets generate --android
 
       - name: 🔄 Capacitor sync
         run: npx cap sync android
 
-      # ⚠️ এই স্টেপটাও আগে ছিল না — google-services.json ছাড়া নেটিভ FCM push
-      # কাজ করবে না। Firebase Console → Project Settings → General →
-      # Android app যোগ করুন (package: com.earnova.app) → এই ফাইল ডাউনলোড
-      # করে GitHub Secret এ পুরো কনটেন্ট বসান (নাম: GOOGLE_SERVICES_JSON)
+      # FCM push এর জন্য: GitHub Secret নাম GOOGLE_SERVICES_JSON
       - name: 🔥 Add google-services.json (FCM config)
         env:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
