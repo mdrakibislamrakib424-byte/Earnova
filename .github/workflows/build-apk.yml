@@ -51,11 +51,6 @@ jobs:
       - name: 🔄 Capacitor sync
         run: npx cap sync android
 
-      # ⚠️ ফিক্স — এই ধাপটা ছাড়া AdMob App ID শুধু capacitor.config.json এ
-      # থাকলেই যথেষ্ট না — AndroidManifest.xml এ সরাসরি একটা নির্দিষ্ট লাইন
-      # না থাকলে অ্যাপ চালু হওয়ার সাথে সাথেই ক্র্যাশ করে (এটাই আসল কারণ
-      # ছিল)। এই ধাপ capacitor.config.json থেকে আসল App ID পড়ে
-      # AndroidManifest.xml এ নিজে থেকেই বসিয়ে দেয়, প্রতিটা build এ।
       - name: 📢 Inject AdMob App ID into AndroidManifest.xml
         run: |
           python3 << 'PYEOF'
@@ -90,25 +85,18 @@ jobs:
             echo "⚠️ GOOGLE_SERVICES_JSON secret নেই — push notification কাজ করবে না, build তবু চলবে।"
           fi
 
-      - name: ⚙️ Enable Google Services + Crashlytics gradle plugin
+      # FCM-এর জন্য শুধু Google Services প্লাগিন রাখা হলো (Crashlytics সম্পূর্ণ বাদ)
+      - name: ⚙️ Enable Google Services plugin
         run: |
           if [ -f "android/app/google-services.json" ]; then
             if ! grep -q "com.google.gms:google-services" android/build.gradle; then
-              sed -i "s/dependencies {/dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'\n        classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.2'/" android/build.gradle
+              sed -i "s/dependencies {/dependencies {\n        classpath 'com.google.gms:google-services:4.4.2'/" android/build.gradle
             fi
             if ! grep -q "com.google.gms.google-services" android/app/build.gradle; then
               echo "apply plugin: 'com.google.gms.google-services'" >> android/app/build.gradle
-              echo "apply plugin: 'com.google.firebase.crashlytics'" >> android/app/build.gradle
-            fi
-            if ! grep -q "firebase-crashlytics" android/app/build.gradle; then
-              echo "" >> android/app/build.gradle
-              echo "dependencies {" >> android/app/build.gradle
-              echo "    implementation platform('com.google.firebase:firebase-bom:33.5.1')" >> android/app/build.gradle
-              echo "    implementation 'com.google.firebase:firebase-crashlytics'" >> android/app/build.gradle
-              echo "}" >> android/app/build.gradle
             fi
           else
-            echo "⚠️ google-services.json নেই — Google Services/Crashlytics প্লাগিন স্কিপ করা হলো।"
+            echo "⚠️ google-services.json নেই — Google Services প্লাগিন স্কিপ করা হলো।"
           fi
 
       - name: 🔑 Decode keystore
