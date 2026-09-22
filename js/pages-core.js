@@ -277,21 +277,11 @@ function selectChoice(type){
   }
 }
 function buildVerify(){
-  // ⚠️ ফিক্স: আগে এখানে "✅ I've Verified" বাটন ছিল — ইউজারকে মেইল
-  // ভেরিফাই করে হাতে করে অ্যাপে ফিরে এসে এই বাটনে চাপতে হতো। এখন
-  // registration-এর সময় verification link-টা সরাসরি অ্যাপ খোলার জন্য
-  // বানানো হয় (custom URL scheme `earnova://verify`) — মেইলের লিংকে
-  // ট্যাপ করলেই অ্যাপ নিজে থেকে খুলে, ভেরিফাই করে, লগইন করিয়ে দেয়
-  // (দেখুন js/app-events.js এর initDeepLinkVerification())। তাই ম্যানুয়াল
-  // বাটনের আর দরকার নেই — তার বদলে স্পষ্ট নির্দেশনা দেখানো হচ্ছে।
   return `<div class="aw fu"><div class="ac">
   <span class="al">✉️</span>
   <div class="a-brand" style="margin-bottom:8px">${T('ve')}</div>
-  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:14px">${T('vd')}</p>
-  <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:14px 16px;margin-bottom:22px;display:flex;align-items:flex-start;gap:10px">
-    <span style="font-size:18px;flex-shrink:0">💡</span>
-    <div style="font-size:12.5px;color:#1e40af;line-height:1.7;text-align:left">${T('autoVerifyHint')}</div>
-  </div>
+  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:22px">${T('vd')}</p>
+  <button class="btn bp mb12" id="veChk">${T('iv')}</button>
   <button class="btn bh mb12" id="veRe">${T('re')}</button>
   <button class="btn br" id="veLo">${T('lo')}</button>
   </div></div>`;
@@ -359,21 +349,22 @@ async function attachAuthEvents(){
     $('#rgEye').onclick=()=>{ const p=$('#rgPw'); p.type=p.type==='password'?'text':'password'; };
     $('#rgToLi').onclick=()=>{ S.page='login'; render(); };
   }
-  // Verify — ⚠️ ফিক্স: "I've Verified" বাটন (veChk) তুলে দেওয়া হয়েছে,
-  // তাই সেটার handler-ও আর দরকার নেই। শুধু Resend আর Logout থেকে গেছে।
-  // Resend-এও এখন সেই একই custom URL scheme (emailRedirectTo) পাঠানো
-  // হচ্ছে, যাতে "আবার পাঠান" চাপলে পাওয়া মেইলের লিংকও অ্যাপ সরাসরি
-  // খুলে দেয় (প্রথমবারের মতোই)।
-  const veRe=$('#veRe');
-  if(veRe){
-    veRe.onclick=()=>{
-      sb.auth.resend({
-        type:'signup',
-        email:fAuth.currentUser?.email,
-        options:{ emailRedirectTo:'earnova://verify' }
-      });
-      toast(T('emailSentMsg'),'s');
+  // Verify
+  const veChk=$('#veChk');
+  if(veChk){
+    veChk.onclick=async()=>{
+      try{
+        // Supabase থেকে fresh user নেয় — সঠিকভাবে check করে
+        const {data:{user:freshUser}} = await sb.auth.getUser();
+        const verified = !!(freshUser?.email_confirmed_at || freshUser?.confirmed_at);
+        if(verified){
+          await fDB.ref(`users/${fAuth.currentUser.uid}/emailVerified`).set(true);
+          toast(T('veok'),'s');
+          S.page='home'; render();
+        } else { toast(T('notVerifiedYetMsg'),'w'); }
+      }catch(e){ toast(T('verifyCheckErrorMsg'),'e'); }
     };
+    $('#veRe').onclick=()=>{ sb.auth.resend({type:'signup',email:fAuth.currentUser?.email}); toast(T('emailSentMsg'),'s'); };
     $('#veLo').onclick=()=>doLogout();
   }
   // Forgot
