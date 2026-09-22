@@ -413,6 +413,76 @@ applyLang(LANGS[savedLang]?savedLang:'en');
 // login করা থাকুক বা না থাকুক, App খোলার সাথে সাথেই একবার চালু হবে
 // (welcome/login screen থেকেই Back button ঠিকভাবে কাজ করবে)
 initBackButton();
+
+// ══════════════════════════════════════════════════════════
+// ⚠️ নতুন — Email Verification Deep Link Handler
+// ══════════════════════════════════════════════════════════
+// আগে ইমেইলের ভেরিফিকেশন লিংকে ট্যাপ করলে ফোনের Chrome ব্রাউজার খুলত,
+// তারপর ইউজারকে হাতে করে আবার অ্যাপে ফিরে এসে "I've Verified" বাটনে
+// চাপতে হতো। এখন registration-এর সময় লিংকটা বানানো হয় custom URL
+// scheme (earnova://verify) দিয়ে — Android নিজেই চিনে ফেলে এই ধরনের
+// লিংক EARNOVA অ্যাপের জন্য (build-apk.yml build-এর সময় AndroidManifest.xml-এ
+// intent-filter বসিয়ে দেয়), তাই Chrome না খুলে সরাসরি অ্যাপ খুলে যায়।
+//
+// অ্যাপ এভাবে খুললে Capacitor-এর App প্লাগিন একটা 'appUrlOpen' ইভেন্ট
+// পাঠায়, যেটাতে পুরো লিংকটা (token/code সহ) থাকে। এই ফাংশন সেই লিংক
+// থেকে session বানিয়ে ইউজারকে সরাসরি লগইন করিয়ে দেয় — কোনো বাটন চাপা
+// লাগে না।
+//
+// Supabase দুই ধরনের ফরম্যাটে token পাঠাতে পারে (কোন ভার্সন ব্যবহার
+// হচ্ছে তার উপর নির্ভর করে), তাই দুটোই handle করা হচ্ছে:
+//   ১) ?code=xxx        (PKCE flow)
+//   ২) #access_token=xxx&refresh_token=yyy   (Implicit flow)
+function initDeepLinkVerification(){
+  if(!window.Capacitor?.Plugins?.App) return; // ব্রাউজারে এই প্লাগিন নেই, স্বাভাবিক
+  const { App: CapApp } = window.Capacitor.Plugins;
+
+  CapApp.addListener('appUrlOpen', async (data)=>{
+    try{
+      if(!data?.url) return;
+      const url = new URL(data.url);
+      if(url.protocol !== 'earnova:') return; // শুধু আমাদের নিজের লিংকই প্রসেস করবো
+
+      let sessionEstablished = false;
+
+      // ১) PKCE flow — ?code=xxx
+      const code = url.searchParams.get('code');
+      if(code){
+        const { error } = await sb.auth.exchangeCodeForSession(code);
+        if(!error) sessionEstablished = true;
+      }
+
+      // ২) Implicit flow — #access_token=xxx&refresh_token=yyy
+      if(!sessionEstablished && url.hash){
+        const hashParams = new URLSearchParams(url.hash.replace(/^#/, ''));
+        const access_token = hashParams.get('access_token');
+        const refresh_token = hashParams.get('refresh_token');
+        if(access_token && refresh_token){
+          const { error } = await sb.auth.setSession({ access_token, refresh_token });
+          if(!error) sessionEstablished = true;
+        }
+      }
+
+      if(!sessionEstablished){
+        toast(T('verifyLinkFailedMsg')||'⚠️ লিংকটা কাজ করেনি, আবার চেষ্টা করুন।','e');
+        return;
+      }
+
+      const {data:{user}} = await sb.auth.getUser();
+      if(!user){
+        toast(T('verifyLinkFailedMsg')||'⚠️ লিংকটা কাজ করেনি, আবার চেষ্টা করুন।','e');
+        return;
+      }
+
+      toast(T('veok')||'✅ ইমেইল ভেরিফাই হয়ে গেছে!','s');
+      await completeUserLogin(user); // js/db.js — লগইনের ঠিক একই সম্পূর্ণ ধাপ
+    }catch(e){
+      console.warn('Deep link verification failed', e);
+      toast(T('verifyLinkFailedMsg')||'⚠️ লিংকটা কাজ করেনি, আবার চেষ্টা করুন।','e');
+    }
+  });
+}
+initDeepLinkVerification();
 initStatusBar();
 initOfflineDetection();
 
