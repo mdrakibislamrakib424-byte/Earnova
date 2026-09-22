@@ -234,37 +234,6 @@ render();
   }
 }
 
-// ⚠️ নতুন — doLogin() এর ভেতরে থাকা "সফলভাবে লগইন হওয়ার পরের সব ধাপ"
-// (userData লোড, wall data, payout settings, listeners চালু করা, ইত্যাদি)
-// এখানে একটা আলাদা, পুনঃব্যবহারযোগ্য ফাংশনে বের করে আনা হলো। এখন এটা
-// দুই জায়গা থেকে কল হয়: (১) সাধারণ পাসওয়ার্ড দিয়ে লগইন করলে, (২)
-// ইমেইল ভেরিফিকেশন লিংকে ট্যাপ করে সরাসরি অ্যাপ খুললে (দেখুন
-// js/app-events.js এর initDeepLinkVerification())। এতে দুই জায়গাতেই
-// হুবহু একই, সম্পূর্ণ setup হয় — কোনো ধাপ আলাদাভাবে লিখে কোথাও বাদ
-// পড়ে যাওয়ার ঝুঁকি থাকে না।
-async function completeUserLogin(u){
-  fAuth.currentUser = _mapUser(u);
-  S.user = fAuth.currentUser;
-  let ud = await loadUserData(u.id);
-  if(!ud){ await new Promise(r=>setTimeout(r,1500)); ud = await loadUserData(u.id); }
-  S.userData = ud;
-  if(S.userData?.banned){ toast(T('banned'),'e'); doLogout(); return; }
-  if(S.userData?.lang && LANGS[S.userData.lang]) applyLang(S.userData.lang);
-  await getWallData();
-  await loadPayoutSettings();
-  setupListeners(u.id);
-  _authInitDone = true;
-  // ✅ লগইন সফল হলে — হোমপেজে যাওয়ার আগে ইন্টারস্টিশিয়াল অ্যাড দেখানো হচ্ছে
-  await showInterstitialAd();
-  S.page='home';
-  render();
-  trackEvent('login', { method:'email' });
-  // non-blocking
-  detectCountry();
-  if(S.userData){ checkDailyBonus(u.id, S.userData); updateLoginStreak(u.id, S.userData); }
-  loadLeaderboard();
-}
-
 async function doLogin(email,pw){
   try{
     const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
@@ -279,7 +248,28 @@ async function doLogin(email,pw){
       S.page='verify';
       render(); return;
     }
-    await completeUserLogin(u);
+    // User data
+    fAuth.currentUser = _mapUser(u);
+    S.user = fAuth.currentUser;
+    let ud = await loadUserData(u.id);
+    if(!ud){ await new Promise(r=>setTimeout(r,1500)); ud = await loadUserData(u.id); }
+    S.userData = ud;
+    if(S.userData?.banned){ toast(T('banned'),'e'); doLogout(); return; }
+    if(S.userData?.lang && LANGS[S.userData.lang]) applyLang(S.userData.lang);
+    await getWallData();
+    await loadPayoutSettings();
+    setupListeners(u.id);
+    _authInitDone = true;
+    // ✅ লগইন সফল হলে — হোমপেজে যাওয়ার আগে ইন্টারস্টিশিয়াল অ্যাড দেখানো হচ্ছে
+    //    (ব্যর্থ লগইনে নিচের catch ব্লকে শুধু error toast, কোনো অ্যাড নেই)
+    await showInterstitialAd();
+    S.page='home';
+    render();
+    trackEvent('login', { method:'email' });
+    // non-blocking
+    detectCountry();
+    if(S.userData){ checkDailyBonus(u.id, S.userData); updateLoginStreak(u.id, S.userData); }
+    loadLeaderboard();
   }catch(e){
     console.error('Login error:', e);
     toast(T('wp'),'e');
@@ -482,15 +472,7 @@ const fAuth = {
   },
 
   async createUserWithEmailAndPassword(email, pw){
-    // ⚠️ ফিক্স: emailRedirectTo যোগ করা হলো — এটা ছাড়া ভেরিফিকেশন মেইলের
-    // লিংক সাধারণ https:// লিংক হিসেবে তৈরি হতো (ব্রাউজারে খুলত)। এখন
-    // custom URL scheme (earnova://verify) ব্যবহার হচ্ছে, তাই লিংকে ট্যাপ
-    // করলে সরাসরি অ্যাপ খুলে যায় — Android নিজেই বুঝে ফেলে এটা কোন অ্যাপের
-    // জন্য (build-apk.yml এ AndroidManifest.xml-এ intent-filter বসানো আছে)।
-    const {data, error} = await sb.auth.signUp({
-      email, password:pw,
-      options:{ emailRedirectTo:'earnova://verify' }
-    });
+    const {data, error} = await sb.auth.signUp({email, password:pw});
     if(error) throw {code: error.message, message: error.message};
     return {user: _mapUser(data.user)};
   },
