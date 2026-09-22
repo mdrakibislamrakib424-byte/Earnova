@@ -74,6 +74,43 @@ jobs:
                   print("ℹ️ AdMob App ID meta-data ইতিমধ্যেই আছে, স্কিপ করা হলো")
           PYEOF
 
+      # ⚠️ নতুন — Email Verification Deep Link (custom URL scheme)
+      # ভেরিফিকেশন মেইলের লিংকে ট্যাপ করলে যেন সরাসরি এই অ্যাপ খুলে যায়
+      # (Chrome ব্রাউজারের বদলে), তার জন্য MainActivity-তে একটা নতুন
+      # intent-filter যোগ করা হচ্ছে — "earnova://" দিয়ে শুরু হওয়া যেকোনো
+      # লিংক পেলে Android এই অ্যাপকেই খুলবে। js/db.js (registration/resend)
+      # আর js/app-events.js (initDeepLinkVerification) এই একই scheme ব্যবহার
+      # করে — তিনটা জায়গাতেই "earnova" বানানটা হুবহু মিলতে হবে।
+      - name: 🔗 Inject deep link intent-filter into AndroidManifest.xml
+        run: |
+          python3 << 'PYEOF'
+          import re
+          path = 'android/app/src/main/AndroidManifest.xml'
+          with open(path) as f:
+              content = f.read()
+          if 'android:scheme="earnova"' in content:
+              print("ℹ️ Deep link intent-filter ইতিমধ্যেই আছে, স্কিপ করা হলো")
+          else:
+              deep_link_filter = (
+                  '\n        <intent-filter>\n'
+                  '            <action android:name="android.intent.action.VIEW" />\n'
+                  '            <category android:name="android.intent.category.DEFAULT" />\n'
+                  '            <category android:name="android.intent.category.BROWSABLE" />\n'
+                  '            <data android:scheme="earnova" />\n'
+                  '        </intent-filter>\n'
+              )
+              pattern = r'(<activity[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)'
+              m = re.search(pattern, content, flags=re.DOTALL)
+              if not m:
+                  print("⚠️ MainActivity ট্যাগ খুঁজে পাওয়া যায়নি — deep link স্কিপ করা হলো।")
+              else:
+                  new_block = m.group(1) + m.group(2) + deep_link_filter + m.group(3)
+                  content = content[:m.start()] + new_block + content[m.end():]
+                  with open(path, 'w') as f:
+                      f.write(content)
+                  print("✅ Deep link intent-filter (earnova://) AndroidManifest.xml এ যোগ করা হলো")
+          PYEOF
+
       # FCM push এর জন্য: GitHub Secret নাম GOOGLE_SERVICES_JSON
       - name: 🔥 Add google-services.json (FCM config)
         env:
