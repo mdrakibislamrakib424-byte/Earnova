@@ -12,7 +12,7 @@ function render(){
     _lastRenderedPageForAd = S.page;
     maybeShowPageEntryAd(S.page); // fire-and-forget — render() ব্লক করবে না
   }
-  if(!S.user || S.page==='verify'){
+  if(!S.user || S.page==='verify' || S.page==='resetOtp'){
     renderAuth();
   } else {
     renderApp();
@@ -33,6 +33,7 @@ function renderAuth(){
   else if(S.page==='register') app.innerHTML=buildRegister();
   else if(S.page==='verify') app.innerHTML=buildVerify();
   else if(S.page==='forgot') app.innerHTML=buildForgot();
+  else if(S.page==='resetOtp') app.innerHTML=buildResetOtp();
   else { S.page='welcome'; app.innerHTML=buildWelcome(); }
   attachAuthEvents();
 }
@@ -188,6 +189,62 @@ function buildWelcome(){
 }
 
 // ─── LOGIN PAGE ───────────────────────────────────────
+// ⚠️ নতুন — Google/Facebook বাটন (Login ও Register দুই ফর্মেই ব্যবহার হয়)
+function buildSocialButtons(){
+  return `
+  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px">
+    <div style="flex:1;height:1px;background:#e2e8f0"></div>
+    <span style="font-size:12px;color:#94a3b8;font-weight:600">${T('orDivider')}</span>
+    <div style="flex:1;height:1px;background:#e2e8f0"></div>
+  </div>
+  <button type="button" class="btn bh mb12 soc-btn" id="socGoogleBtn" style="display:flex;align-items:center;justify-content:center;gap:10px">
+    <span style="width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid #dbeafe;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#ea4335;flex-shrink:0">G</span>
+    <span>${T('googleBtn')}</span>
+  </button>
+  <button type="button" class="btn bh mb12 soc-btn" id="socFacebookBtn" style="display:flex;align-items:center;justify-content:center;gap:10px">
+    <span style="width:20px;height:20px;border-radius:50%;background:#1877f2;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">f</span>
+    <span>${T('facebookBtn')}</span>
+  </button>`;
+}
+
+// ⚠️ নতুন — Cloudflare Turnstile CAPTCHA বক্স (Supabase Attack Protection
+// চালু থাকলে দরকার হয়; না থাকলেও বক্সটা দেখাতে সমস্যা নেই, শুধু টোকেন
+// আনভেরিফায়েড থাকবে)। প্রতিটা ফর্মের জন্য আলাদা container id লাগে।
+function buildCaptchaBox(containerId){
+  return `<div id="${containerId}" class="cf-turnstile" style="margin-bottom:14px;display:flex;justify-content:center"></div>`;
+}
+
+/**
+ * DOM-এ বসানোর পরে Turnstile widget রেন্ডার করে এবং টোকেন পেলে callback
+ * চালায়। Turnstile স্ক্রিপ্ট (index.html এ যোগ করা) লোড না হলে চুপচাপ
+ * স্কিপ করে — অ্যাপ ভেঙে পড়বে না, শুধু captchaToken খালি থাকবে।
+ * @param {string} containerId
+ * @param {(token:string)=>void} onToken
+ */
+function renderCaptcha(containerId, onToken){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  // ⚠️ capacitor.config.json/README এর নির্দেশ অনুযায়ী নিজের Turnstile
+  // site key এখানে বসাতে হবে — placeholder থাকলে widget দেখাবে না।
+  const TURNSTILE_SITE_KEY = 'PASTE_YOUR_TURNSTILE_SITE_KEY_HERE';
+  if(!TURNSTILE_SITE_KEY || TURNSTILE_SITE_KEY.includes('PASTE_YOUR')){
+    console.warn('⚠️ Turnstile site key সেট করা হয়নি — captcha বক্স স্কিপ করা হলো।');
+    return;
+  }
+  if(typeof turnstile === 'undefined'){
+    console.warn('⚠️ Turnstile script লোড হয়নি — index.html চেক করুন।');
+    return;
+  }
+  try{
+    turnstile.render(`#${containerId}`, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (token)=>{ onToken(token); },
+      'expired-callback': ()=>{ onToken(''); },
+      'error-callback': ()=>{ onToken(''); }
+    });
+  }catch(e){ console.warn('Turnstile render failed', e); }
+}
+
 function buildLogin(){
   return `<div class="aw fu"><div class="ac">
   <span class="al">◆</span>
@@ -199,8 +256,10 @@ function buildLogin(){
   <label class="lbl">${T('pw')}</label>
   <div class="ipw"><input class="inp" id="lgPw" type="password" placeholder="••••••••" autocomplete="current-password"><button class="ipe" id="lgEye">👁</button></div>
   <div style="text-align:right;margin-bottom:12px"><button style="background:none;border:none;cursor:pointer;font-size:12px;color:#64748b;font-family:inherit" id="lgFP">${T('fp')}</button></div>
+  ${buildCaptchaBox('lgCaptcha')}
   <button class="btn bp mb12" id="lgBtn">${T('li')}</button>
   <div style="text-align:center;font-size:13px;color:#64748b">${T('na')} <button style="background:none;border:none;cursor:pointer;font-size:13px;color:#a78bfa;font-family:inherit" id="lgToReg">${T('reg')}</button></div>
+  ${buildSocialButtons()}
   <div class="div"></div>
   <div style="text-align:center"><button style="background:none;border:none;cursor:pointer;font-size:12px;color:#475569;font-family:inherit" id="lgLang">${T('languageBtn')}</button></div>
   <div style="text-align:center;margin-top:16px;font-size:11px;color:#94a3b8">
@@ -251,8 +310,10 @@ function buildRegister(){
     <label class="lbl">${T('rc')}</label>
     <input class="inp" id="rgRef" type="text" placeholder="XXXXXX" value="${S.regRefCode||''}">
     <div style="background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:10px 13px;font-size:12px;color:#2563eb;margin-bottom:14px">${T('regPromo')}</div>
+    ${buildCaptchaBox('rgCaptcha')}
     <button class="btn bp mb12" id="rgBtn">${T('reg')}</button>
     <div style="text-align:center;font-size:13px;color:#64748b">${T('ha')} <button style="background:none;border:none;cursor:pointer;font-size:13px;color:#2563eb;font-family:inherit" id="rgToLi">${T('li')}</button></div>
+    ${buildSocialButtons()}
     <div style="text-align:center;font-size:11px;color:#94a3b8;margin-top:12px">
       ${T('legalAgree')}
       <a href="terms.html" onclick="openLink('terms.html');return false;" style="color:#2563eb">${T('termsWord')}</a> ${T('andWord')}
@@ -276,16 +337,23 @@ function selectChoice(type){
     openLink('services.html');
   }
 }
+// ⚠️ ফিক্স: আগে এখানে "✅ I've Verified" বাটন ছিল যেটা sb.auth.getUser()
+// দিয়ে চেক করত (এর জন্য একটা active session লাগত)। এখন OTP কোড দিয়ে
+// ভেরিফাই করা হয় — কোনো session ছাড়াই sb.auth.verifyOtp() কল করা যায়,
+// তাই register()-এর পরে sign-out করা থাকলেও এটা নির্ভরযোগ্যভাবে কাজ করে।
 function buildVerify(){
   return `<div class="aw fu"><div class="ac">
   <span class="al">✉️</span>
-  <div class="a-brand" style="margin-bottom:8px">${T('ve')}</div>
-  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:22px">${T('vd')}</p>
-  <button class="btn bp mb12" id="veChk">${T('iv')}</button>
+  <div class="a-brand" style="margin-bottom:8px">${T('otpTitle')}</div>
+  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:22px">${T('otpDesc')}</p>
+  <input class="inp" id="veOtp" type="text" inputmode="numeric" maxlength="6" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:6px;font-size:20px;font-weight:700" autocomplete="one-time-code">
+  <button class="btn bp mb12" id="veChk" style="margin-top:14px">${T('otpSubmit')}</button>
   <button class="btn bh mb12" id="veRe">${T('re')}</button>
   <button class="btn br" id="veLo">${T('lo')}</button>
   </div></div>`;
 }
+
+// ধাপ ১ — ইমেইল দিয়ে রিসেট কোড চাওয়া
 function buildForgot(){
   return `<div class="aw fu"><div class="ac">
   <span class="al">🔑</span>
@@ -293,22 +361,44 @@ function buildForgot(){
   <p style="font-size:12px;color:#f59e0b;text-align:center;margin-bottom:16px">⚠️ ${T('fpn')}</p>
   <label class="lbl">${T('em')}</label>
   <input class="inp" id="fpEm" type="email" placeholder="${T('registeredEmailPlaceholder')}">
+  ${buildCaptchaBox('fpCaptcha')}
   <button class="btn bp mb12" id="fpBtn">${T('rp')}</button>
   <button class="btn bh" id="fpBack">${T('back')}</button>
   </div></div>`;
 }
 
+// ⚠️ নতুন — ধাপ ২: কোড + নতুন পাসওয়ার্ড (buildForgot সফল হলে এখানে আসে)
+function buildResetOtp(){
+  return `<div class="aw fu"><div class="ac">
+  <span class="al">🔑</span>
+  <div class="a-brand" style="margin-bottom:8px">${T('resetOtpTitle')}</div>
+  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:18px">${T('resetOtpDesc')}</p>
+  <input class="inp" id="roOtp" type="text" inputmode="numeric" maxlength="6" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:6px;font-size:20px;font-weight:700;margin-bottom:14px" autocomplete="one-time-code">
+  <label class="lbl">${T('newPasswordPlaceholder')}</label>
+  <div class="ipw"><input class="inp" id="roPw" type="password" placeholder="${T('pwMinPlaceholder')}"><button class="ipe" id="roEye">👁</button></div>
+  <button class="btn bp mb12" id="roBtn" style="margin-top:8px">${T('resetOtpSubmit')}</button>
+  <button class="btn bh" id="roBack">${T('back')}</button>
+  </div></div>`;
+}
+
 async function attachAuthEvents(){
+  // ⚠️ নতুন — প্রতিটা captcha widget-এর সর্বশেষ টোকেন এখানে জমা থাকে।
+  // attachAuthEvents() প্রতিবার render()-এর পর নতুন করে কল হয়, তাই এই
+  // ভ্যারিয়েবলগুলো প্রতি রেন্ডারে ফ্রেশ হয়ে যায় — পুরনো টোকেন কখনো
+  // পরের ফর্মে "লিক" করে না।
+  let lgCaptchaToken='', rgCaptchaToken='', fpCaptchaToken='';
+
   // Login
   const lgBtn=$('#lgBtn');
   if(lgBtn){
+    renderCaptcha('lgCaptcha', (tok)=>{ lgCaptchaToken=tok; });
     lgBtn.onclick=async()=>{
       const email=$('#lgEm').value.trim();
       const pw=$('#lgPw').value;
       if(!email||!pw){ toast(T('fillAllFieldsMsg'),'e'); return; }
       lgBtn.disabled=true;
       lgBtn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .7s linear infinite"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Logging in…</span>';
-      await doLogin(email,pw);
+      await doLogin(email,pw,lgCaptchaToken);
       lgBtn.disabled=false;
       lgBtn.textContent=T('li');
     };
@@ -316,10 +406,13 @@ async function attachAuthEvents(){
     $('#lgFP').onclick=()=>{ S.page='forgot'; render(); };
     $('#lgToReg').onclick=()=>{ S.page='register'; render(); };
     $('#lgLang').onclick=()=>EZ.openLM();
+    $('#socGoogleBtn').onclick=()=>signInWithGoogle();
+    $('#socFacebookBtn').onclick=()=>signInWithFacebook();
   }
   // Register
   const rgBtn=$('#rgBtn');
   if(rgBtn){
+    renderCaptcha('rgCaptcha', (tok)=>{ rgCaptchaToken=tok; });
     // ── Auto-fill referral code from URL param or localStorage ──
     const rgRefEl=$('#rgRef');
     if(rgRefEl && !rgRefEl.value){
@@ -343,39 +436,58 @@ async function attachAuthEvents(){
       if(pw!==cpw){ toast(T('pwMismatchMsg'),'e'); return; }
       rgBtn.disabled=true;
       rgBtn.innerHTML='<span style="display:inline-flex;align-items:center;gap:8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .7s linear infinite"><path d="M12 2a10 10 0 0 1 10 10"/></svg> Creating account…</span>';
-      await doRegister(nm,em,pw,ref);
+      await doRegister(nm,em,pw,ref,rgCaptchaToken);
       rgBtn.disabled=false; rgBtn.textContent=T('reg');
     };
     $('#rgEye').onclick=()=>{ const p=$('#rgPw'); p.type=p.type==='password'?'text':'password'; };
     $('#rgToLi').onclick=()=>{ S.page='login'; render(); };
+    $('#socGoogleBtn').onclick=()=>signInWithGoogle();
+    $('#socFacebookBtn').onclick=()=>signInWithFacebook();
   }
-  // Verify
+  // ⚠️ ফিক্স: Verify — এখন OTP কোড দিয়ে, sb.auth.getUser() এর বদলে
+  // verifySignupOtp()/resendSignupOtp() ব্যবহার করে, আর fAuth.currentUser
+  // এর বদলে S.verifyEmail থেকে email নেয় (sign-out এর পরেও টিকে থাকে)
   const veChk=$('#veChk');
   if(veChk){
+    const email = S.verifyEmail || fAuth.currentUser?.email || '';
     veChk.onclick=async()=>{
-      try{
-        // Supabase থেকে fresh user নেয় — সঠিকভাবে check করে
-        const {data:{user:freshUser}} = await sb.auth.getUser();
-        const verified = !!(freshUser?.email_confirmed_at || freshUser?.confirmed_at);
-        if(verified){
-          await fDB.ref(`users/${fAuth.currentUser.uid}/emailVerified`).set(true);
-          toast(T('veok'),'s');
-          S.page='home'; render();
-        } else { toast(T('notVerifiedYetMsg'),'w'); }
-      }catch(e){ toast(T('verifyCheckErrorMsg'),'e'); }
+      const otp=$('#veOtp').value.trim();
+      if(!email){ toast(T('otpInvalid'),'e'); return; }
+      veChk.disabled=true; veChk.textContent='...';
+      await verifySignupOtp(email, otp);
+      veChk.disabled=false; veChk.textContent=T('otpSubmit');
     };
-    $('#veRe').onclick=()=>{ sb.auth.resend({type:'signup',email:fAuth.currentUser?.email}); toast(T('emailSentMsg'),'s'); };
+    $('#veRe').onclick=async()=>{
+      if(!email){ toast(T('otpInvalid'),'e'); return; }
+      await resendSignupOtp(email);
+    };
     $('#veLo').onclick=()=>doLogout();
   }
-  // Forgot
+  // Forgot — ধাপ ১: কোড চাওয়া
   const fpBtn=$('#fpBtn');
   if(fpBtn){
+    renderCaptcha('fpCaptcha', (tok)=>{ fpCaptchaToken=tok; });
     fpBtn.onclick=async()=>{
       fpBtn.disabled=true; fpBtn.textContent='Sending…';
-      await doForgotPw($('#fpEm').value.trim());
+      await doForgotPw($('#fpEm').value.trim(), fpCaptchaToken);
       fpBtn.disabled=false; fpBtn.textContent=T('rp');
     };
     $('#fpBack').onclick=()=>{ S.page='login'; render(); };
+  }
+  // ⚠️ নতুন — Forgot ধাপ ২: কোড + নতুন পাসওয়ার্ড
+  const roBtn=$('#roBtn');
+  if(roBtn){
+    roBtn.onclick=async()=>{
+      const otp=$('#roOtp').value.trim();
+      const newPw=$('#roPw').value;
+      const email = S.resetEmail || '';
+      if(!email){ toast(T('otpInvalid'),'e'); S.page='forgot'; render(); return; }
+      roBtn.disabled=true; roBtn.textContent='...';
+      await confirmPasswordResetOtp(email, otp, newPw);
+      roBtn.disabled=false; roBtn.textContent=T('resetOtpSubmit');
+    };
+    $('#roEye').onclick=()=>{ const p=$('#roPw'); p.type=p.type==='password'?'text':'password'; };
+    $('#roBack').onclick=()=>{ S.page='forgot'; render(); };
   }
 }
 
