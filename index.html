@@ -96,6 +96,11 @@
 <!-- Supabase SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- ⚠️ নতুন — Cloudflare Turnstile (CAPTCHA): login/register/forgot ফর্মে
+     bot প্রতিরোধ করতে। async/defer দেওয়া আছে যাতে পেজ লোড ব্লক না করে।
+     js/pages-core.js এর renderCaptcha() এই স্ক্রিপ্টের `turnstile` অবজেক্ট
+     ব্যবহার করে widget রেন্ডার করে। -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
 <script src="js/config.js"></script>
 <script src="js/lang.js"></script>
