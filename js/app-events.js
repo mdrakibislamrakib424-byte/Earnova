@@ -415,6 +415,8 @@ applyLang(LANGS[savedLang]?savedLang:'en');
 initBackButton();
 initStatusBar();
 initOfflineDetection();
+initSocialLogin();
+initSocialLoginCallback();
 
 // ─── HANDLE POPUPS ────────────────────────────────────
 window.addEventListener('popstate',()=>{
@@ -973,6 +975,51 @@ function initBackButton(){
       _lastBackPress = now;
       toast(T('pressBackAgainExit')||'আরেকবার Back চাপুন App বন্ধ করতে','w',2000);
     }
+  });
+}
+
+// ══════════════════════════════════════════════════════════
+// ⚠️ নতুন — Google/Facebook Social Login সেটআপ
+// ══════════════════════════════════════════════════════════
+// Google Sign-In প্লাগিন (@capgo/capacitor-social-login) একবার শুরুতেই
+// initialize করতে হয় — capacitor.config.json এর webClientId ব্যবহার করে।
+// এটা না করলে SocialLogin.login() কল করলে এরর দেবে।
+function initSocialLogin(){
+  if(!window.Capacitor?.Plugins?.SocialLogin) return; // ব্রাউজারে/প্লাগিন ছাড়া স্বাভাবিক
+  try{
+    const { SocialLogin } = window.Capacitor.Plugins;
+    // ⚠️ capacitor.config.json এর plugins.SocialLogin এ webClientId বসাতে হবে —
+    // এখানে placeholder থাকলে Google Login কাজ করবে না (নিচে সতর্কতা দেখাবে)
+    const webClientId = 'PASTE_YOUR_GOOGLE_WEB_CLIENT_ID_HERE';
+    if(!webClientId || webClientId.includes('PASTE_YOUR')){
+      console.warn('⚠️ Google Sign-In webClientId সেট করা হয়নি — Google Login কাজ করবে না।');
+      return;
+    }
+    SocialLogin.initialize({ google:{ webClientId } });
+  }catch(e){ console.warn('SocialLogin init failed', e); }
+}
+
+// Facebook লগইন সিস্টেম ব্রাউজারে হয় (দেখুন js/db.js এর signInWithFacebook)।
+// ইউজার Facebook-এ অনুমতি দেওয়ার পর "earnova://oauth-callback?code=..."
+// লিংকে ফিরে আসে — এই একই appUrlOpen ইভেন্ট সেটা ধরে। আগের ইমেইল
+// ভেরিফিকেশন deep-link (এখন বাদ) থেকে এটা সম্পূর্ণ আলাদা: এটা শুধু
+// "earnova://oauth-callback" পাথ প্রসেস করে, অন্য কিছু না।
+function initSocialLoginCallback(){
+  if(!window.Capacitor?.Plugins?.App) return;
+  const { App: CapApp } = window.Capacitor.Plugins;
+  CapApp.addListener('appUrlOpen', async (data)=>{
+    try{
+      if(!data?.url) return;
+      const url = new URL(data.url);
+      if(url.protocol!=='earnova:' || url.host!=='oauth-callback') return; // শুধু OAuth callback-ই প্রসেস করবে
+      const code = url.searchParams.get('code');
+      if(!code){
+        const err = url.searchParams.get('error_description') || url.searchParams.get('error');
+        if(err) toast(T('socialLoginFailedMsg'),'e');
+        return;
+      }
+      await completeSocialOAuthLogin(code);
+    }catch(e){ console.error('OAuth callback handling failed:', e); }
   });
 }
 
