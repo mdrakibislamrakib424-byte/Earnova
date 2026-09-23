@@ -27,6 +27,14 @@
     },
     "AdMob": {
       "appId": "ca-app-pub-1093580583332518~8050365428"
+    },
+    "SocialLogin": {
+      "providers": {
+        "google": true,
+        "facebook": true,
+        "apple": false,
+        "twitter": false
+      }
     }
   }
 }
