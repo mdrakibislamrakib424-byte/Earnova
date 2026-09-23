@@ -226,7 +226,7 @@ function renderCaptcha(containerId, onToken){
   if(!el) return;
   // ⚠️ capacitor.config.json/README এর নির্দেশ অনুযায়ী নিজের Turnstile
   // site key এখানে বসাতে হবে — placeholder থাকলে widget দেখাবে না।
-  const TURNSTILE_SITE_KEY = 'PASTE_YOUR_TURNSTILE_SITE_KEY_HERE';
+  const TURNSTILE_SITE_KEY = '0x4AAAAAAFBcA3dirFl1ug29';
   if(!TURNSTILE_SITE_KEY || TURNSTILE_SITE_KEY.includes('PASTE_YOUR')){
     console.warn('⚠️ Turnstile site key সেট করা হয়নি — captcha বক্স স্কিপ করা হলো।');
     return;
