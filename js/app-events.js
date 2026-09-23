@@ -990,7 +990,7 @@ function initSocialLogin(){
     const { SocialLogin } = window.Capacitor.Plugins;
     // ⚠️ capacitor.config.json এর plugins.SocialLogin এ webClientId বসাতে হবে —
     // এখানে placeholder থাকলে Google Login কাজ করবে না (নিচে সতর্কতা দেখাবে)
-    const webClientId = 'PASTE_YOUR_GOOGLE_WEB_CLIENT_ID_HERE';
+    const webClientId = '1040669106457-618hjrn9cb9mobtr642damtomb0b4dkr.apps.googleusercontent.com';
     if(!webClientId || webClientId.includes('PASTE_YOUR')){
       console.warn('⚠️ Google Sign-In webClientId সেট করা হয়নি — Google Login কাজ করবে না।');
       return;
