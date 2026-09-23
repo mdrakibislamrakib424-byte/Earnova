@@ -102,7 +102,7 @@ function msToHM(ms){
 }
 
 // ─── AUTH FUNCTIONS ───────────────────────────────────
-async function doRegister(name,email,pw,refCode){
+async function doRegister(name,email,pw,refCode,captchaToken){
   // Device check
   const devId=getDeviceId();
   const usersSnap=await fDB.ref('users').orderByChild('device_id').equalTo(devId).once('value');
@@ -128,7 +128,7 @@ async function doRegister(name,email,pw,refCode){
     if(refByUid===S.user?.uid){ toast(T('rs2'),'e'); return; }
   }
   try{
-    const cred=await fAuth.createUserWithEmailAndPassword(email,pw);
+    const cred=await fAuth.createUserWithEmailAndPassword(email,pw,captchaToken);
     const uid=cred.user.id || cred.user.uid;
     await cred.user.sendEmailVerification();
     // ⚠️ ফিক্স: আগে genRef() একবার কল করে সরাসরি ব্যবহার হতো, uniqueness
@@ -219,6 +219,11 @@ toast(T('rs'),'s');
 await showInterstitialAd();
 await sb.auth.signOut();
 S.user = null;
+// ⚠️ ফিক্স: sign-out এর পর fAuth.currentUser/S.user দুটোই null হয়ে যায়,
+// তাই verify পেজের OTP সাবমিট/রিসেন্ড বাটন কার email ব্যবহার করবে জানত
+// না (এতদিন এটা লুকানো bug ছিল)। এখন আলাদাভাবে S.verifyEmail-এ email
+// সংরক্ষণ করে রাখা হচ্ছে, যেটা sign-out এ মুছে যায় না।
+S.verifyEmail = email;
 S.page='verify';
 render();
   }catch(e){
@@ -234,9 +239,45 @@ render();
   }
 }
 
-async function doLogin(email,pw){
+// ⚠️ নতুন — doLogin() এর ভেতরে থাকা "সফলভাবে লগইন হওয়ার পরের সব ধাপ"
+// (userData লোড, wall data, payout settings, listeners চালু করা, ইত্যাদি)
+// এখানে একটা আলাদা, পুনঃব্যবহারযোগ্য ফাংশনে বের করে আনা হলো। এখন এটা
+// একাধিক জায়গা থেকে কল হয়: (১) সাধারণ পাসওয়ার্ড দিয়ে লগইন করলে,
+// (২) OTP কোড দিয়ে ইমেইল ভেরিফাই করলে (verifySignupOtp), (৩) Google/
+// Facebook দিয়ে লগইন করলে (signInWithGoogle/completeSocialLogin)। এতে
+// এই ৪ জায়গাতেই হুবহু একই, সম্পূর্ণ setup হয় — কোনো ধাপ আলাদাভাবে লিখে
+// কোথাও বাদ পড়ে যাওয়ার ঝুঁকি থাকে না।
+async function completeUserLogin(u){
+  fAuth.currentUser = _mapUser(u);
+  S.user = fAuth.currentUser;
+  let ud = await loadUserData(u.id);
+  if(!ud){ await new Promise(r=>setTimeout(r,1500)); ud = await loadUserData(u.id); }
+  S.userData = ud;
+  if(S.userData?.banned){ toast(T('banned'),'e'); doLogout(); return; }
+  if(S.userData?.lang && LANGS[S.userData.lang]) applyLang(S.userData.lang);
+  await getWallData();
+  await loadPayoutSettings();
+  setupListeners(u.id);
+  _authInitDone = true;
+  // ✅ লগইন সফল হলে — হোমপেজে যাওয়ার আগে ইন্টারস্টিশিয়াল অ্যাড দেখানো হচ্ছে
+  await showInterstitialAd();
+  S.page='home';
+  render();
+  trackEvent('login', { method:'email' });
+  // non-blocking
+  detectCountry();
+  if(S.userData){ checkDailyBonus(u.id, S.userData); updateLoginStreak(u.id, S.userData); }
+  loadLeaderboard();
+}
+
+// captchaToken — hCaptcha/Turnstile থেকে পাওয়া টোকেন (Supabase Attack
+// Protection চালু থাকলে বাধ্যতামূলক, না থাকলে undefined পাঠালেও সমস্যা নেই)
+async function doLogin(email,pw,captchaToken){
   try{
-    const {data, error} = await sb.auth.signInWithPassword({email, password:pw});
+    const {data, error} = await sb.auth.signInWithPassword({
+      email, password:pw,
+      options: captchaToken ? { captchaToken } : undefined
+    });
     if(error) throw error;
     const u = data.user;
     if(!u) throw new Error('No user');
@@ -245,34 +286,152 @@ async function doLogin(email,pw){
     if(!isVerified){
       S.user = _mapUser(u);
       fAuth.currentUser = S.user;
+      S.verifyEmail = email; // ⚠️ OTP verify/resend বাটনের জন্য দরকার
       S.page='verify';
       render(); return;
     }
-    // User data
-    fAuth.currentUser = _mapUser(u);
-    S.user = fAuth.currentUser;
-    let ud = await loadUserData(u.id);
-    if(!ud){ await new Promise(r=>setTimeout(r,1500)); ud = await loadUserData(u.id); }
-    S.userData = ud;
-    if(S.userData?.banned){ toast(T('banned'),'e'); doLogout(); return; }
-    if(S.userData?.lang && LANGS[S.userData.lang]) applyLang(S.userData.lang);
-    await getWallData();
-    await loadPayoutSettings();
-    setupListeners(u.id);
-    _authInitDone = true;
-    // ✅ লগইন সফল হলে — হোমপেজে যাওয়ার আগে ইন্টারস্টিশিয়াল অ্যাড দেখানো হচ্ছে
-    //    (ব্যর্থ লগইনে নিচের catch ব্লকে শুধু error toast, কোনো অ্যাড নেই)
-    await showInterstitialAd();
-    S.page='home';
-    render();
-    trackEvent('login', { method:'email' });
-    // non-blocking
-    detectCountry();
-    if(S.userData){ checkDailyBonus(u.id, S.userData); updateLoginStreak(u.id, S.userData); }
-    loadLeaderboard();
+    await completeUserLogin(u);
   }catch(e){
     console.error('Login error:', e);
     toast(T('wp'),'e');
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// ⚠️ নতুন — Google / Facebook দিয়ে লগইন-রেজিস্টার (একই সাথে দুটোই)
+// ══════════════════════════════════════════════════════════
+// Google: নেটিভ Credential Manager (@capgo/capacitor-social-login) দিয়ে
+//   সরাসরি ID Token পাওয়া যায়, তারপর Supabase-কে sb.auth.signInWithIdToken()
+//   দিয়ে সরাসরি লগইন করানো হয় — কোনো ব্রাউজার/রিডাইরেক্ট লাগে না।
+//
+// Facebook: ⚠️ গুরুত্বপূর্ণ — Supabase-এর signInWithIdToken() অফিসিয়ালি
+//   Facebook সাপোর্ট করে না (শুধু google/apple/azure/keycloak), তাই
+//   Facebook-এর জন্য Supabase-এর standard OAuth ব্যবহার করা হচ্ছে:
+//   সিস্টেম ব্রাউজারে Facebook লগইন পেজ খোলে (@capacitor/browser দিয়ে),
+//   ইউজার Facebook-এ লগইন/অনুমতি দেওয়ার পর "earnova://oauth-callback"
+//   এই কাস্টম লিংকে ফিরে আসে, অ্যাপ সেটা ধরে সেশন বানায়। এটা ইমেইল
+//   ভেরিফিকেশন লিংকের মতো "ব্লকড" হয় না, কারণ এটা ইউজারের নিজের সরাসরি
+//   ট্যাপ থেকে শুরু হওয়া একটা চলমান ব্রাউজার সেশন (ইমেইলে আসা লিংকের
+//   মতো আলাদা করে একটা পুরনো/ঠান্ডা রিডাইরেক্ট না)।
+
+/**
+ * users টেবিলে (Realtime DB wrapper fDB) রেকর্ড না থাকলে বানায় — নতুন
+ * Google/Facebook ইউজারের জন্য প্রথমবার লগইনে কল হয়। doRegister()-এর
+ * সাথে সামঞ্জস্যপূর্ণ রাখা হয়েছে (ref code, device id, stats counter সহ)।
+ */
+async function ensureUserRecord(u, extraName){
+  const existing = await loadUserData(u.id);
+  if(existing) return existing;
+
+  const devId = getDeviceId();
+  let code = genRef();
+  for(let attempt=0; attempt<5; attempt++){
+    const {data:codeExists} = await sb.from('users').select('id').eq('ref_code', code).maybeSingle();
+    if(!codeExists) break;
+    code = genRef();
+  }
+  const savedRef = localStorage.getItem('ez_ref') || '';
+  let refByUid = null;
+  if(savedRef){
+    const snap = await fDB.ref('users').orderByChild('ref_code').equalTo(savedRef.toUpperCase()).once('value');
+    const found = snap.val();
+    if(found) refByUid = Object.keys(found)[0];
+  }
+
+  const userData = {
+    id: u.id, uid: u.id,
+    name: extraName || u.email?.split('@')[0] || 'User',
+    email: u.email,
+    ref_code: code,
+    referred_by: refByUid || null,
+    lang: S.lang, country: S.country||'', country_earn: S.countryEarn||0.30,
+    usd_earned:0, today_earned:0, today_date:new Date().toDateString(),
+    ads_watched:0, offers_completed:0, active_referrals:0,
+    is_admin:false, banned:false, forgot_used:false, device_id:devId,
+    // Google/Facebook নিজেরাই ইমেইল ভেরিফাই করে রাখে, তাই সরাসরি true
+    email_verified:true,
+    login_streak:0, last_login_date:'', daily_bonus_date:'', last_spin_date:'',
+    kyc_status:'none', wall_progress:{}, read_notices:{}, completed_tasks:{},
+    social_unlock_at:0, created_at:new Date().toISOString(),
+  };
+  const {error:insertErr} = await sb.from('users').upsert(userData, {onConflict:'id'});
+  if(insertErr){ console.error('Social user insert error:', insertErr); throw insertErr; }
+
+  try{
+    const {error:rpcErr} = await sb.rpc('atomic_increment', { p_table:'stats', p_id:'stats', p_field:'total_users', p_delta:1 });
+    if(rpcErr){
+      const {data:stData} = await sb.from('stats').select('total_users').eq('id','stats').maybeSingle();
+      await sb.from('stats').upsert({id:'stats', total_users:(stData?.total_users||0)+1}, {onConflict:'id'});
+    }
+  }catch(e){ /* counter fail হলেও লগইন আটকাবে না */ }
+
+  if(refByUid){
+    await atomicIncrement(refByUid,'usdEarned',CFG.refBonus);
+    await atomicIncrement(refByUid,'referralEarned',CFG.refBonus);
+    await atomicIncrement(refByUid,'activeReferrals',1);
+    trackEvent('referral_success', { referrer_uid: refByUid });
+  }
+  EZCache.invalidateAll();
+  return await loadUserData(u.id);
+}
+
+async function signInWithGoogle(){
+  if(!window.Capacitor?.Plugins?.SocialLogin){
+    toast(T('socialLoginFailedMsg'),'e'); return;
+  }
+  try{
+    const { SocialLogin } = window.Capacitor.Plugins;
+    const res = await SocialLogin.login({ provider:'google', options:{ scopes:['email','profile'] } });
+    const idToken = res?.result?.idToken;
+    if(!idToken) throw new Error('No Google idToken returned');
+    const { data, error } = await sb.auth.signInWithIdToken({ provider:'google', token: idToken });
+    if(error) throw error;
+    const u = data.user;
+    await ensureUserRecord(u, res.result?.profile?.name);
+    trackEvent('sign_up_or_login', { method:'google' });
+    await completeUserLogin(u);
+  }catch(e){
+    console.error('Google login error:', e);
+    toast(T('socialLoginFailedMsg'),'e');
+  }
+}
+
+/**
+ * Facebook — সিস্টেম ব্রাউজারে Supabase-এর OAuth authorize URL খোলে।
+ * ইউজার ফিরে এলে (earnova://oauth-callback?code=...) app-events.js এর
+ * initSocialLoginCallback() এটা ধরে exchangeCodeForSession() কল করে এবং
+ * completeFacebookLogin() কে ডাকে (নিচে)।
+ */
+async function signInWithFacebook(){
+  if(!window.Capacitor?.Plugins?.Browser){
+    toast(T('socialLoginFailedMsg'),'e'); return;
+  }
+  try{
+    const { Browser } = window.Capacitor.Plugins;
+    const authUrl = `${SUPA_URL}/auth/v1/authorize?provider=facebook&redirect_to=earnova://oauth-callback`;
+    await Browser.open({ url: authUrl });
+    // বাকিটা app-events.js এর appUrlOpen listener হ্যান্ডেল করবে
+  }catch(e){
+    console.error('Facebook login open error:', e);
+    toast(T('socialLoginFailedMsg'),'e');
+  }
+}
+
+/** app-events.js এর OAuth deep-link listener থেকে কল হয় (code পাওয়ার পর) */
+async function completeSocialOAuthLogin(code){
+  try{
+    const { data, error } = await sb.auth.exchangeCodeForSession(code);
+    if(error) throw error;
+    const u = data.user;
+    if(window.Capacitor?.Plugins?.Browser){
+      try{ await window.Capacitor.Plugins.Browser.close(); }catch(e){}
+    }
+    await ensureUserRecord(u, u.user_metadata?.full_name || u.user_metadata?.name);
+    trackEvent('sign_up_or_login', { method:'facebook' });
+    await completeUserLogin(u);
+  }catch(e){
+    console.error('Facebook OAuth callback error:', e);
+    toast(T('socialLoginFailedMsg'),'e');
   }
 }
 
@@ -286,7 +445,7 @@ function doLogout(){
   render();
 }
 
-async function doForgotPw(email){
+async function doForgotPw(email,captchaToken){
   if(!email){ toast(T('enterEmailMsg'),'e'); return; }
   // Check if already used (if user is logged in)
   if(S.userData?.forgotUsed){
@@ -299,14 +458,90 @@ async function doForgotPw(email){
     if(found){
       const uid=Object.keys(found)[0];
       if(found[uid].forgotUsed){ toast(T('fpn'),'w'); return; }
-      await fAuth.sendPasswordResetEmail(email);
+      await fAuth.sendPasswordResetEmail(email,captchaToken);
       await fDB.ref(`users/${uid}/forgotUsed`).set(true);
     } else {
-      await fAuth.sendPasswordResetEmail(email);
+      await fAuth.sendPasswordResetEmail(email,captchaToken);
     }
+    // ⚠️ নতুন: এখন এখানে থামা যাবে না — লগইন পেজে ফেরত না পাঠিয়ে
+    // OTP-কোড + নতুন-পাসওয়ার্ড দেওয়ার স্ক্রিনে পাঠানো হচ্ছে
+    S.resetEmail = email; // পরের ধাপে (confirmPasswordResetOtp) কাজে লাগবে
     toast(T('es'),'s');
-    S.page='login'; render();
+    S.page='resetOtp'; render();
   }catch(e){ toast(e.message,'e'); }
+}
+
+// ══════════════════════════════════════════════════════════
+// ⚠️ নতুন — OTP-ভিত্তিক ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড রিসেট
+// ══════════════════════════════════════════════════════════
+// আগে ইমেইল ভেরিফিকেশন ও পাসওয়ার্ড রিসেট দুটোই লিংক-ভিত্তিক ছিল — যেটা
+// Chrome/Gmail-এর কাস্টম-স্কিম ব্লকিং সমস্যায় ভুগত (সাদা স্ক্রিন, "লিংক
+// কাজ করেনি")। এখন দুটোই ৬-ডিজিট কোড দিয়ে হয়, সম্পূর্ণ অ্যাপের ভেতরেই —
+// কোনো ব্রাউজার/লিংক/হোস্টিং লাগে না।
+
+/**
+ * সাইনআপের সময় পাঠানো ৬-ডিজিট কোড যাচাই করে — সফল হলে সরাসরি লগইন
+ * করিয়ে completeUserLogin() চালায়।
+ */
+async function verifySignupOtp(email, token){
+  if(!token || token.length!==6){ toast(T('otpInvalid'),'e'); return; }
+  try{
+    const {data, error} = await sb.auth.verifyOtp({ email, token, type:'signup' });
+    if(error){
+      const msg=(error.message||'').toLowerCase();
+      if(msg.includes('expired')) toast(T('otpExpired'),'e');
+      else toast(T('otpInvalid'),'e');
+      return;
+    }
+    const u = data?.user;
+    if(!u){ toast(T('otpInvalid'),'e'); return; }
+    await fDB.ref(`users/${u.id}/emailVerified`).set(true);
+    trackEvent('email_verified', { method:'otp' });
+    await completeUserLogin(u);
+  }catch(e){
+    console.error('OTP verify error:', e);
+    toast(T('verifyCheckErrorMsg')||T('otpInvalid'),'e');
+  }
+}
+
+/** সাইনআপ-ভেরিফিকেশন কোড আবার পাঠায় (নতুন ৬-ডিজিট কোড) */
+async function resendSignupOtp(email){
+  try{
+    const {error} = await sb.auth.resend({ type:'signup', email });
+    if(error) throw error;
+    toast(T('otpResent'),'s');
+  }catch(e){ toast(e.message||T('otpInvalid'),'e'); }
+}
+
+/**
+ * পাসওয়ার্ড রিসেট কোড যাচাই করে ও নতুন পাসওয়ার্ড সেট করে।
+ * verifyOtp(type:'recovery') সফল হলে একটা সাময়িক session তৈরি হয়,
+ * সেই session দিয়েই updateUser({password}) কল করা হয়।
+ */
+async function confirmPasswordResetOtp(email, token, newPassword){
+  if(!token || token.length!==6){ toast(T('otpInvalid'),'e'); return; }
+  if(!newPassword || newPassword.length<6){ toast(T('pwMin6CharsMsg'),'e'); return; }
+  try{
+    const {data, error} = await sb.auth.verifyOtp({ email, token, type:'recovery' });
+    if(error){
+      const msg=(error.message||'').toLowerCase();
+      if(msg.includes('expired')) toast(T('otpExpired'),'e');
+      else toast(T('otpInvalid'),'e');
+      return;
+    }
+    const {error: updateErr} = await sb.auth.updateUser({ password: newPassword });
+    if(updateErr){ toast(updateErr.message,'e'); return; }
+    toast(T('resetSuccessMsg'),'s');
+    // নিরাপত্তার জন্য — নতুন পাসওয়ার্ড সেট হওয়ার পর সাইন আউট করে সরাসরি
+    // লগইন স্ক্রিনে পাঠানো হচ্ছে, যাতে ইউজার নতুন পাসওয়ার্ড দিয়ে
+    // সচেতনভাবে আবার লগইন করে
+    await sb.auth.signOut();
+    S.user=null; S.userData=null; S.resetEmail='';
+    S.page='login'; render();
+  }catch(e){
+    console.error('Password reset error:', e);
+    toast(e.message||T('otpInvalid'),'e');
+  }
 }
 
 // ─── WITHDRAWAL SYSTEM ───────────────────────────────
@@ -471,15 +706,25 @@ const fAuth = {
     return {user: _mapUser(data.user)};
   },
 
-  async createUserWithEmailAndPassword(email, pw){
-    const {data, error} = await sb.auth.signUp({email, password:pw});
+  // ⚠️ নতুন: emailRedirectTo বাদ দেওয়া হলো — এখন ভেরিফিকেশন লিংকের বদলে
+  // ৬-ডিজিট OTP কোড পাঠানো হয় (Supabase Dashboard → Auth → Email
+  // Templates → "Confirm signup"-এ {{ .Token }} বসাতে হবে)। captchaToken
+  // পাস করা থাকলে Supabase-এর Attack Protection যাচাই করবে।
+  async createUserWithEmailAndPassword(email, pw, captchaToken){
+    const {data, error} = await sb.auth.signUp({
+      email, password:pw,
+      options: { captchaToken: captchaToken || undefined }
+    });
     if(error) throw {code: error.message, message: error.message};
     return {user: _mapUser(data.user)};
   },
 
-  async sendPasswordResetEmail(email){
+  async sendPasswordResetEmail(email,captchaToken){
+    // ⚠️ নতুন: redirectTo বাদ দেওয়া হলো — পাসওয়ার্ড রিসেটও এখন OTP কোড
+    // দিয়ে হয় (Supabase Dashboard → Auth → Email Templates →
+    // "Reset Password"-এ {{ .Token }} বসাতে হবে)
     const {error} = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin
+      captchaToken: captchaToken || undefined
     });
     if(error) throw error;
   },
