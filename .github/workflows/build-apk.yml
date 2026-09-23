@@ -51,6 +51,62 @@ jobs:
       - name: 🔄 Capacitor sync
         run: npx cap sync android
 
+      # ⚠️ নতুন — Google/Facebook Social Login এর জন্য দরকার
+      # ১) OAuth callback deep link (শুধু Facebook-এর জন্য — Google নেটিভ
+      #    প্লাগিন দিয়ে হয়, কোনো deep link লাগে না)
+      # ২) Facebook App ID/Client Token — GitHub Secrets থেকে আসে, যাতে
+      #    এই মান রিপোতে প্লেইনটেক্সটে না থাকে
+      - name: 🔗 Inject OAuth callback intent-filter + Facebook config
+        env:
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_CLIENT_TOKEN: ${{ secrets.FACEBOOK_CLIENT_TOKEN }}
+        run: |
+          python3 << 'PYEOF'
+          import os, re
+
+          manifest_path = 'android/app/src/main/AndroidManifest.xml'
+          with open(manifest_path) as f:
+              content = f.read()
+
+          # ── ১) OAuth callback intent-filter (earnova://oauth-callback) ──
+          if 'android:host="oauth-callback"' in content:
+              print("ℹ️ OAuth callback intent-filter ইতিমধ্যেই আছে, স্কিপ করা হলো")
+          else:
+              oauth_filter = (
+                  '\n        <intent-filter>\n'
+                  '            <action android:name="android.intent.action.VIEW" />\n'
+                  '            <category android:name="android.intent.category.DEFAULT" />\n'
+                  '            <category android:name="android.intent.category.BROWSABLE" />\n'
+                  '            <data android:scheme="earnova" android:host="oauth-callback" />\n'
+                  '        </intent-filter>\n'
+              )
+              m = re.search(r'(<activity[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)', content, flags=re.DOTALL)
+              if not m:
+                  print("⚠️ MainActivity ট্যাগ খুঁজে পাওয়া যায়নি — OAuth callback intent-filter স্কিপ করা হলো।")
+              else:
+                  content = content[:m.start()] + m.group(1) + m.group(2) + oauth_filter + m.group(3) + content[m.end():]
+                  print("✅ OAuth callback intent-filter (earnova://oauth-callback) যোগ করা হলো")
+
+          fb_app_id = os.environ.get('FACEBOOK_APP_ID', '').strip()
+          fb_client_token = os.environ.get('FACEBOOK_CLIENT_TOKEN', '').strip()
+
+          # ── ২) Facebook meta-data (শুধু secret দেওয়া থাকলে) ──
+          if not fb_app_id or not fb_client_token:
+              print("⚠️ FACEBOOK_APP_ID/FACEBOOK_CLIENT_TOKEN secret নেই — Facebook Login স্কিপ করা হলো, build তবু চলবে।")
+          elif 'com.facebook.sdk.ApplicationId' in content:
+              print("ℹ️ Facebook meta-data ইতিমধ্যেই আছে, স্কিপ করা হলো")
+          else:
+              fb_meta = (
+                  f'<meta-data android:name="com.facebook.sdk.ApplicationId" android:value="fb{fb_app_id}"/>\n'
+                  f'        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="{fb_client_token}"/>'
+              )
+              content = re.sub(r'(<application[^>]*>)', r'\1\n        ' + fb_meta, content, count=1)
+              print("✅ Facebook App ID/Client Token AndroidManifest.xml এ যোগ করা হলো")
+
+          with open(manifest_path, 'w') as f:
+              f.write(content)
+          PYEOF
+
       - name: 📢 Inject AdMob App ID into AndroidManifest.xml
         run: |
           python3 << 'PYEOF'
