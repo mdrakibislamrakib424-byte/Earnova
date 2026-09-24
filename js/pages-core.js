@@ -223,22 +223,6 @@ function buildWelcome(){
 
 // ─── LOGIN PAGE ───────────────────────────────────────
 // ⚠️ নতুন — Google/Facebook বাটন (Login ও Register দুই ফর্মেই ব্যবহার হয়)
-function buildSocialButtons(){
-  return `
-  <div style="display:flex;align-items:center;gap:10px;margin:18px 0 14px">
-    <div style="flex:1;height:1px;background:#e2e8f0"></div>
-    <span style="font-size:12px;color:#94a3b8;font-weight:600">${T('orDivider')}</span>
-    <div style="flex:1;height:1px;background:#e2e8f0"></div>
-  </div>
-  <button type="button" class="btn bh mb12 soc-btn" id="socGoogleBtn" style="display:flex;align-items:center;justify-content:center;gap:10px">
-    <span style="width:20px;height:20px;border-radius:50%;background:#fff;border:1px solid #dbeafe;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#ea4335;flex-shrink:0">G</span>
-    <span>${T('googleBtn')}</span>
-  </button>
-  <button type="button" class="btn bh mb12 soc-btn" id="socFacebookBtn" style="display:flex;align-items:center;justify-content:center;gap:10px">
-    <span style="width:20px;height:20px;border-radius:50%;background:#1877f2;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0">f</span>
-    <span>${T('facebookBtn')}</span>
-  </button>`;
-}
 
 // ⚠️ নতুন — Cloudflare Turnstile CAPTCHA বক্স (Supabase Attack Protection
 // চালু থাকলে দরকার হয়; না থাকলেও বক্সটা দেখাতে সমস্যা নেই, শুধু টোকেন
@@ -304,14 +288,9 @@ function axTogglePw(id, cb){
   const p=document.getElementById(id);
   if(p) p.type = cb.checked ? 'text' : 'password';
 }
+// Google/Facebook লগইন আপাতত বন্ধ — সেটআপ শেষ হলে এখানে আবার বাটন ফেরত দিলেই চালু হবে
 function buildSocialButtons(){
-  return `<div class="ax-or"><span>${T('orDivider')}</span></div>
-  <button type="button" class="ax-soc" id="socGoogleBtn">
-    <span class="ax-soc-i" style="background:#fff;color:#ea4335;border:1px solid #dbeafe">G</span><span>${T('googleBtn')}</span>
-  </button>
-  <button type="button" class="ax-soc" id="socFacebookBtn">
-    <span class="ax-soc-i" style="background:#1877f2;color:#fff">f</span><span>${T('facebookBtn')}</span>
-  </button>`;
+  return '';
 }
 
 function buildLogin(){
@@ -427,8 +406,8 @@ async function attachAuthEvents(){
     $('#lgFP').onclick=()=>{ S.page='forgot'; render(); };
     $('#lgToReg').onclick=()=>{ S.page='register'; render(); };
     $('#lgLang').onclick=()=>EZ.openLM();
-    $('#socGoogleBtn').onclick=()=>signInWithGoogle();
-    $('#socFacebookBtn').onclick=()=>signInWithFacebook();
+    { const _g=$('#socGoogleBtn'); if(_g) _g.onclick=()=>signInWithGoogle(); }
+    { const _f=$('#socFacebookBtn'); if(_f) _f.onclick=()=>signInWithFacebook(); }
   }
   // Register
   const rgBtn=$('#rgBtn');
@@ -461,8 +440,8 @@ async function attachAuthEvents(){
     };
     $('#rgEye').onclick=()=>{ const p=$('#rgPw'); p.type=p.type==='password'?'text':'password'; };
     $('#rgToLi').onclick=()=>{ S.page='login'; render(); };
-    $('#socGoogleBtn').onclick=()=>signInWithGoogle();
-    $('#socFacebookBtn').onclick=()=>signInWithFacebook();
+    { const _g=$('#socGoogleBtn'); if(_g) _g.onclick=()=>signInWithGoogle(); }
+    { const _f=$('#socFacebookBtn'); if(_f) _f.onclick=()=>signInWithFacebook(); }
   }
   // ⚠️ ফিক্স: Verify — এখন OTP কোড দিয়ে, sb.auth.getUser() এর বদলে
   // verifySignupOtp()/resendSignupOtp() ব্যবহার করে, আর fAuth.currentUser
