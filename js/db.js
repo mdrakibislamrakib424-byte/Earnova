@@ -484,7 +484,11 @@ async function doForgotPw(email,captchaToken){
  * করিয়ে completeUserLogin() চালায়।
  */
 async function verifySignupOtp(email, token){
-  if(!token || token.length!==6){ toast(T('otpInvalid'),'e'); return; }
+  // ⚠️ ফিক্স: আগে token.length!==6 চেক ছিল, কিন্তু Supabase প্রজেক্ট
+  // ভেদে OTP কোড ৬ থেকে ৮ (কখনো তার বেশিও) ডিজিটের হতে পারে (এটা
+  // GoTrue-এর একটা প্রজেক্ট-লেভেল সেটিং, ৬ কোনো ফিক্সড নিয়ম না)। তাই
+  // এখন শুধু "কমপক্ষে ৬ ডিজিট" চেক করা হচ্ছে, নির্দিষ্ট সংখ্যা না।
+  if(!token || token.length<6){ toast(T('otpInvalid'),'e'); return; }
   try{
     const {data, error} = await sb.auth.verifyOtp({ email, token, type:'signup' });
     if(error){
@@ -519,7 +523,7 @@ async function resendSignupOtp(email){
  * সেই session দিয়েই updateUser({password}) কল করা হয়।
  */
 async function confirmPasswordResetOtp(email, token, newPassword){
-  if(!token || token.length!==6){ toast(T('otpInvalid'),'e'); return; }
+  if(!token || token.length<6){ toast(T('otpInvalid'),'e'); return; } // ⚠️ ফিক্স: ৬-৮+ ডিজিট সব গ্রহণ করবে
   if(!newPassword || newPassword.length<6){ toast(T('pwMin6CharsMsg'),'e'); return; }
   try{
     const {data, error} = await sb.auth.verifyOtp({ email, token, type:'recovery' });
