@@ -132,7 +132,7 @@ async function sendPushToAll(title, body, url='', category='general'){
 
 // ── App ভেতরেও notification দেখানো (in-app notice + phone push একসাথে) ──
 async function sendLocalNotif(title, body){
-  if(S.pushEnabled && Notification.permission==='granted'){
+  if(S.pushEnabled && typeof Notification!=='undefined' && Notification.permission==='granted'){
     new Notification(title,{ body, icon:'/icon.png' });
   }
 }
