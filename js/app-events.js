@@ -395,7 +395,8 @@ fAuth.onAuthStateChanged(async user=>{
     // যেকোনো error হলেও loader বন্ধ হবে
     console.error('Auth error:', err);
     hideLdr();
-    S.page='welcome';
+    if(S.user && S.userData){ S.page='home'; }
+    else { S.user=null; S.userData=null; S.page='welcome'; }
     render();
   }
 });
