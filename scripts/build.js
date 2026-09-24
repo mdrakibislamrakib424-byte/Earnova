@@ -49,6 +49,26 @@ async function main(){
     }
   }
 
+
+  // ---- Images: root-এর সব ছবি (bkash/nagad/paypal/visa/... ) www/-তে কপি ----
+  // আগে শুধু icon.png ও splash.png কপি হতো, তাই পেমেন্ট/সোশ্যাল লোগো APK-তে ছিল না।
+  const IMG_EXT = /\.(png|jpe?g|webp|svg|gif)$/i;
+  for (const f of fs.readdirSync(ROOT)) {
+    if (!IMG_EXT.test(f)) continue;
+    fs.copyFileSync(path.join(ROOT, f), path.join(WWW, f));
+    console.log(`   ${f}  www/${f} (image)`);
+    built++;
+  }
+  // ফাইলের নামে বানান ভুল থাকলে (fecbook / instragram) সঠিক নামেও কপি করা হবে
+  const IMG_ALIASES = [['fecbook.png','facebook.png'], ['instragram.png','instagram.png']];
+  for (const [from, to] of IMG_ALIASES) {
+    const fp = path.join(ROOT, from);
+    if (fs.existsSync(fp) && !fs.existsSync(path.join(ROOT, to))) {
+      fs.copyFileSync(fp, path.join(WWW, to));
+      console.log(`   ${from}  www/${to} (alias)`);
+    }
+  }
+
   // ── js/ ফোল্ডারের সব .js ফাইল minify করে কপি করা (terser থাকলে) ──
   let terser = null;
   try { terser = require('terser'); }
