@@ -130,7 +130,11 @@ function startAd(wallId, type='unlock', cb=null){
   // ── নেটিভ Android APK-তে থাকলে AdMob Rewarded Video দেখাও, শেষ হলে finishAd() কল হবে ──
   const isNativeAd = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   if(isNativeAd && window.Capacitor?.Plugins?.AdMob){
-    showRewardedAd(()=>{ finishAd(); });
+    showRewardedAd(()=>{ finishAd(); }, ()=>{
+      //  ad লোড/শো না হলে বা reward ছাড়া বন্ধ হলে — state রিসেট, না হলে বাটন আটকে থাকত
+      S.adActive=false; S.adWallId=null; S.adType=null; S.adCallback=null;
+      toast(S.lang==='bn' ? 'এই মুহূর্তে বিজ্ঞাপন পাওয়া যাচ্ছে না, একটু পরে আবার চেষ্টা করুন' : 'Ad is not available right now, please try again in a moment','w',5000);
+    });
     // Rewarded ad চলাকালীন নিজস্ব UI counter/modal দেখানোর দরকার নেই (AdMob নিজেই ফুলস্ক্রিন দেখায়)
     return;
   }
@@ -883,22 +887,48 @@ function buildLangModal(){
 }
 
 // ─── COUNTRY DETECT ───────────────────────────────────
-async function detectCountry(){
+async function _fetchCountryJson(url, pick){
+  const ctl = (typeof AbortController!=='undefined') ? new AbortController() : null;
+  const t = ctl ? setTimeout(()=>ctl.abort(), 5000) : null;
   try{
-    const r=await fetch('https://country-check.therockvai-textbd2025.workers.dev');
-    const d=await r.json();
-    const cc=d.country||'';
-    S.country=cc;
-    let earn=CFG.earnDef;
-    if(CFG.earnCountry[cc]) earn=CFG.earnCountry[cc];
-    else if(CFG.hiCC.includes(cc)) earn=CFG.earnHi;
-    S.countryEarn=earn;
-    if(S.user && S.userData){
+    const r = await fetch(url, ctl ? {signal:ctl.signal} : undefined);
+    const d = await r.json();
+    return String(pick(d)||'').toUpperCase();
+  } finally { if(t) clearTimeout(t); }
+}
+async function detectCountry(){
+  let cc='';
+  // একটার পর একটা সার্ভিস — একটা বন্ধ থাকলে পরেরটা
+  const sources = [
+    ['https://country-check.therockvai-textbd2025.workers.dev', d=>d.country],
+    ['https://ipwho.is/',                                        d=>d.country_code],
+    ['https://ipapi.co/json/',                                   d=>d.country_code],
+  ];
+  for(const [url,pick] of sources){
+    try{ cc = await _fetchCountryJson(url,pick); if(cc && cc.length===2) break; cc=''; }catch(e){}
+  }
+  // সব সার্ভিস ফেল করলে ফোনের টাইমজোন দিয়ে অন্তত বাংলাদেশ চেনা
+  if(!cc){
+    try{
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      if(tz==='Asia/Dhaka' || tz==='Asia/Dacca') cc='BD';
+    }catch(e){}
+  }
+  const prev = S.country;
+  S.country = cc;
+  let earn=CFG.earnDef;
+  if(CFG.earnCountry[cc]) earn=CFG.earnCountry[cc];
+  else if(CFG.hiCC.includes(cc)) earn=CFG.earnHi;
+  S.countryEarn=earn;
+  if(cc && S.user && S.userData){
+    try{
       fDB.ref(`users/${S.user.uid}/country`).set(cc);
       fDB.ref(`users/${S.user.uid}/countryEarn`).set(earn);
-    }
-    return cc;
-  }catch(e){ S.country=''; S.countryEarn=CFG.earnDef; return ''; }
+    }catch(e){}
+  }
+  // wallet খোলা থাকলে দেশ বদলালে মেথড লিস্ট (bKash/Nagad) ঠিক করতে আবার আঁকা
+  if(cc && cc!==prev && S.page==='wallet' && !S.adActive){ try{ render(); }catch(e){} }
+  return cc;
 }
 
 // ─── SUPABASE DB HELPERS ─────────────────────────────
