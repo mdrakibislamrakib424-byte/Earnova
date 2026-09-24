@@ -12,11 +12,32 @@ function render(){
     _lastRenderedPageForAd = S.page;
     maybeShowPageEntryAd(S.page); // fire-and-forget — render() ব্লক করবে না
   }
-  if(!S.user || S.page==='verify' || S.page==='resetOtp'){
-    renderAuth();
-  } else {
-    renderApp();
+  try{
+    if(!S.user || S.page==='verify' || S.page==='resetOtp'){
+      renderAuth();
+    } else {
+      renderApp();
+    }
+  }catch(err){
+    // কোনো পেজ বানাতে গিয়ে error হলে সাদা স্ক্রিনের বদলে Retry/Logout বাটন দেখাবে
+    console.error('Render error:', err);
+    showRenderFallback(err);
   }
+}
+
+function showRenderFallback(err){
+  const ldr=document.getElementById('ldr');
+  const app=document.getElementById('app');
+  if(ldr) ldr.style.display='none';
+  if(!app) return;
+  app.style.display='block';
+  app.innerHTML=`<div style="padding:40px 24px;text-align:center;font-family:sans-serif">
+    <div style="font-size:42px;margin-bottom:10px">⚠️</div>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Something went wrong</div>
+    <div style="font-size:12px;color:#64748b;margin-bottom:20px;word-break:break-word">${String(err&&err.message||err).replace(/</g,'&lt;')}</div>
+    <button class="btn bp" style="margin-bottom:10px" onclick="location.reload()">Retry</button>
+    <button class="btn bh" onclick="doLogout()">Logout</button>
+  </div>`;
 }
 
 function renderAuth(){
@@ -788,7 +809,7 @@ function buildHome(){
        নেটিভ App-এর ভেতরে দেখানো অর্থহীন, কারণ ইউজার তো আগে থেকেই App-এর ভেতরে) -->
 
   <!-- PUSH NOTIFICATION BANNER -->
-  ${!S.pushEnabled && Notification?.permission!=='granted'?`<div class="push-banner" onclick="enablePush()">
+  ${!S.pushEnabled && !(typeof Notification!=='undefined' && Notification.permission==='granted')?`<div class="push-banner" onclick="enablePush()">
     <span style="font-size:24px">🔔</span>
     <div style="flex:1">
       <div style="font-size:13px;font-weight:700;color:#fff">${T('enableNotifTitle')}</div>
