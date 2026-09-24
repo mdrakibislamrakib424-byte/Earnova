@@ -226,7 +226,7 @@ function renderCaptcha(containerId, onToken){
   if(!el) return;
   // ⚠️ capacitor.config.json/README এর নির্দেশ অনুযায়ী নিজের Turnstile
   // site key এখানে বসাতে হবে — placeholder থাকলে widget দেখাবে না।
-  const TURNSTILE_SITE_KEY = '0x4AAAAAAFBcA3dirFl1ug29';
+  const TURNSTILE_SITE_KEY = '0x4AAAAAAAFBcA3dirF11ug29';
   if(!TURNSTILE_SITE_KEY || TURNSTILE_SITE_KEY.includes('PASTE_YOUR')){
     console.warn('⚠️ Turnstile site key সেট করা হয়নি — captcha বক্স স্কিপ করা হলো।');
     return;
@@ -346,7 +346,7 @@ function buildVerify(){
   <span class="al">✉️</span>
   <div class="a-brand" style="margin-bottom:8px">${T('otpTitle')}</div>
   <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:22px">${T('otpDesc')}</p>
-  <input class="inp" id="veOtp" type="text" inputmode="numeric" maxlength="6" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:6px;font-size:20px;font-weight:700" autocomplete="one-time-code">
+  <input class="inp" id="veOtp" type="text" inputmode="numeric" maxlength="10" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:4px;font-size:18px;font-weight:700" autocomplete="one-time-code">
   <button class="btn bp mb12" id="veChk" style="margin-top:14px">${T('otpSubmit')}</button>
   <button class="btn bh mb12" id="veRe">${T('re')}</button>
   <button class="btn br" id="veLo">${T('lo')}</button>
@@ -373,7 +373,7 @@ function buildResetOtp(){
   <span class="al">🔑</span>
   <div class="a-brand" style="margin-bottom:8px">${T('resetOtpTitle')}</div>
   <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:18px">${T('resetOtpDesc')}</p>
-  <input class="inp" id="roOtp" type="text" inputmode="numeric" maxlength="6" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:6px;font-size:20px;font-weight:700;margin-bottom:14px" autocomplete="one-time-code">
+  <input class="inp" id="roOtp" type="text" inputmode="numeric" maxlength="10" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:4px;font-size:18px;font-weight:700;margin-bottom:14px" autocomplete="one-time-code">
   <label class="lbl">${T('newPasswordPlaceholder')}</label>
   <div class="ipw"><input class="inp" id="roPw" type="password" placeholder="${T('pwMinPlaceholder')}"><button class="ipe" id="roEye">👁</button></div>
   <button class="btn bp mb12" id="roBtn" style="margin-top:8px">${T('resetOtpSubmit')}</button>
