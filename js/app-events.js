@@ -369,7 +369,7 @@ fAuth.onAuthStateChanged(async user=>{
         // Balance notification — app খুললে balance দেখে push পাঠায় (3s delay)
         setTimeout(()=> checkBalanceNotification(), 3000);
         // Review popup — 24h পরপর
-        setTimeout(()=> checkReviewPopup(), 5000);
+        //setTimeout(()=> checkReviewPopup(), 5000);
       }
       loadLeaderboard();
       startLiveTicker();
