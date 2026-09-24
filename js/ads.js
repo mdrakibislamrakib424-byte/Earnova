@@ -92,15 +92,37 @@ async function maybeShowPageEntryAd(page){
 // দেখেই একাধিকবার balance ক্রেডিট হয়ে যেতে পারত। এখন প্রতিটা ভিডিও শেষে
 // reward পাওয়ার সাথে সাথেই সেই listener-টা নিজে থেকেই সরে যায় (handle.remove()),
 // তাই পরের ভিডিওর জন্য শুধু একটাই fresh listener কাজ করে।
-async function showRewardedAd(onReward){
-  if(!window.Capacitor?.Plugins?.AdMob){ toast('Rewarded ad শুধু APK-তে কাজ করবে','w'); return; }
+async function showRewardedAd(onReward, onFail){
+  const AdMob = window.Capacitor?.Plugins?.AdMob;
+  if(!AdMob){ toast('Rewarded ad শুধু APK-তে চলে','w'); if(onFail) onFail('no_plugin'); return; }
+  let finished = false;
+  const handles = [];
+  const cleanup = ()=>{ handles.forEach(h=>{ try{ h && h.remove && h.remove(); }catch(e){} }); handles.length = 0; };
+  const giveReward = ()=>{
+    if(finished) return; finished = true; cleanup();
+    if(onReward) onReward();
+  };
+  const fail = (why)=>{
+    if(finished) return; finished = true; cleanup();
+    console.warn('AdMob rewarded ad failed:', why);
+    if(onFail) onFail(why);
+  };
+  const on = async (eventNames, fn)=>{
+    for(const n of eventNames){
+      try{ handles.push(await AdMob.addListener(n, fn)); }catch(e){}
+    }
+  };
   try{
-    const { AdMob } = window.Capacitor.Plugins;
-    const handle = await AdMob.addListener('onRewardedVideoReward', (reward)=>{
-      handle.remove(); // একবার reward পেলেই listener সরিয়ে ফেলা — duplicate credit বন্ধ করতে
-      if(onReward) onReward(reward);
-    });
+    // ⚠️ সঠিক ইভেন্ট নাম হলো 'onRewardedVideoAdReward' (আগের কোডে 'Ad' বাদ ছিল বলে reward কখনো আসত না)
+    await on(['onRewardedVideoAdReward','onRewardedVideoReward'], ()=>giveReward());
+    await on(['onRewardedVideoAdFailedToLoad','onRewardedVideoAdFailedToShow'], (e)=>fail(e && (e.message||e.code) || 'load_failed'));
+    // user reward পাওয়ার আগেই ad বন্ধ করলে
+    await on(['onRewardedVideoAdDismissed'], ()=>{ setTimeout(()=>fail('dismissed'), 400); });
     await AdMob.prepareRewardVideoAd({ adId: ADMOB_REWARDED_UNIT_ID });
-    await AdMob.showRewardVideoAd();
-  }catch(e){ console.warn('AdMob rewarded ad failed', e); }
+    const res = await AdMob.showRewardVideoAd();
+    // কিছু plugin ভার্সনে reward এখানেই ফেরত আসে
+    if(res && (res.type || res.amount)) giveReward();
+  }catch(e){
+    fail(e && (e.message||e.code) || e);
+  }
 }
