@@ -499,9 +499,20 @@ async function verifySignupOtp(email, token){
     }
     const u = data?.user;
     if(!u){ toast(T('otpInvalid'),'e'); return; }
-    await fDB.ref(`users/${u.id}/emailVerified`).set(true);
-    trackEvent('email_verified', { method:'otp' });
-    await completeUserLogin(u);
+    // OTP এখানে সফল — এর পরের ধাপে কিছু ফেল করলেও কোড আর "ভুল/মেয়াদ শেষ" বলা যাবে না
+    try{
+      await fDB.ref(`users/${u.id}/emailVerified`).set(true);
+      trackEvent('email_verified', { method:'otp' });
+    }catch(e2){ console.warn('emailVerified flag update failed', e2); }
+    try{
+      await completeUserLogin(u);
+    }catch(e3){
+      console.error('Post-verify login error:', e3);
+      fAuth.currentUser = _mapUser(u);
+      S.user = fAuth.currentUser;
+      if(S.userData){ S.page='home'; render(); }
+      else { toast(T('verifyCheckErrorMsg'),'e'); }
+    }
   }catch(e){
     console.error('OTP verify error:', e);
     toast(T('verifyCheckErrorMsg')||T('otpInvalid'),'e');
