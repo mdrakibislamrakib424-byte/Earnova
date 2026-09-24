@@ -13,6 +13,11 @@ function render(){
     maybeShowPageEntryAd(S.page); // fire-and-forget — render() ব্লক করবে না
   }
   try{
+    // auth পেজে ইন্ডিগো স্ট্যাটাস বার, অ্যাপের ভেতরে আগের নীল
+    const _authPg = ['login','register','verify','forgot','resetOtp'].includes(S.page);
+    setStatusBarColor((!S.user || S.page==='verify' || S.page==='resetOtp') && _authPg ? '#303f9f' : '#2563eb');
+  }catch(e){}
+  try{
     if(!S.user || S.page==='verify' || S.page==='resetOtp'){
       renderAuth();
     } else {
@@ -23,6 +28,13 @@ function render(){
     console.error('Render error:', err);
     showRenderFallback(err);
   }
+}
+
+function setStatusBarColor(color){
+  try{
+    const SB = window.Capacitor?.Plugins?.StatusBar;
+    if(SB) SB.setBackgroundColor({ color });
+  }catch(e){}
 }
 
 function showRenderFallback(err){
@@ -266,82 +278,77 @@ function renderCaptcha(containerId, onToken){
   }catch(e){ console.warn('Turnstile render failed', e); }
 }
 
-function buildLogin(){
-  return `<div class="aw fu"><div class="ac">
-  <span class="al">◆</span>
-  <div class="a-brand">${T('appName')}</div>
-  <div class="a-sub">${T('appTag')}</div>
-  <div class="a-ttl">${T('li')}</div>
-  <label class="lbl">${T('em')}</label>
-  <input class="inp" id="lgEm" type="email" placeholder="you@email.com" autocomplete="email">
-  <label class="lbl">${T('pw')}</label>
-  <div class="ipw"><input class="inp" id="lgPw" type="password" placeholder="••••••••" autocomplete="current-password"><button class="ipe" id="lgEye">👁</button></div>
-  <div style="text-align:right;margin-bottom:12px"><button style="background:none;border:none;cursor:pointer;font-size:12px;color:#64748b;font-family:inherit" id="lgFP">${T('fp')}</button></div>
-  ${buildCaptchaBox('lgCaptcha')}
-  <button class="btn bp mb12" id="lgBtn">${T('li')}</button>
-  <div style="text-align:center;font-size:13px;color:#64748b">${T('na')} <button style="background:none;border:none;cursor:pointer;font-size:13px;color:#a78bfa;font-family:inherit" id="lgToReg">${T('reg')}</button></div>
-  ${buildSocialButtons()}
-  <div class="div"></div>
-  <div style="text-align:center"><button style="background:none;border:none;cursor:pointer;font-size:12px;color:#475569;font-family:inherit" id="lgLang">${T('languageBtn')}</button></div>
-  <div style="text-align:center;margin-top:16px;font-size:11px;color:#94a3b8">
-  <a href="privacy.html" onclick="openLink('privacy.html');return false;" style="color:#2563eb;text-decoration:none">${T('privacyPolicyLink')}</a>
-  &nbsp;·&nbsp;
-  <a href="terms.html" onclick="openLink('terms.html');return false;" style="color:#2563eb;text-decoration:none">${T('termsOfServiceLink')}</a>
-  </div>
-  </div></div>`;
+// ══════════════════════════════════════════════════════════
+//  AUTH PAGES — নতুন ডিজাইন (Indigo app bar + হালকা নীল ব্যাকগ্রাউন্ড + নীল কার্ড)
+//  সব ID (lgEm, lgPw, rgBtn, veOtp ...) আগের মতোই — শুধু চেহারা বদলেছে
+// ══════════════════════════════════════════════════════════
+function axShell(title, inner, footer){
+  return `<div class="ax">
+    <div class="ax-bar"><div class="ax-bar-t">${title}</div></div>
+    <div class="ax-body">
+      <img class="ax-logo" src="icon.png" alt="" onerror="this.style.display='none'">
+      <div class="ax-brand">${T('appName')}</div>
+      <div class="ax-tag">${T('appTag')}</div>
+      <div class="ax-card">${inner}</div>
+      ${footer||''}
+    </div>
+  </div>`;
 }
+// সাদা pill ইনপুট + নিচে গোলাপি underline; chkId থাকলে ডানে "পাসওয়ার্ড দেখান" চেকবক্স
+function axField(label, id, type, ph, extra, chkId){
+  const chk = chkId ? `<input type="checkbox" class="ax-chk" id="${chkId}" onclick="axTogglePw('${id}',this)" aria-label="show password">` : '';
+  return `<label class="ax-lbl" for="${id}">${label}</label>
+  <div class="ax-f${chkId?' has-chk':''}"><input class="ax-inp" id="${id}" type="${type}" placeholder="${ph||''}" ${extra||''}>${chk}</div>`;
+}
+function axTogglePw(id, cb){
+  const p=document.getElementById(id);
+  if(p) p.type = cb.checked ? 'text' : 'password';
+}
+function buildSocialButtons(){
+  return `<div class="ax-or"><span>${T('orDivider')}</span></div>
+  <button type="button" class="ax-soc" id="socGoogleBtn">
+    <span class="ax-soc-i" style="background:#fff;color:#ea4335;border:1px solid #dbeafe">G</span><span>${T('googleBtn')}</span>
+  </button>
+  <button type="button" class="ax-soc" id="socFacebookBtn">
+    <span class="ax-soc-i" style="background:#1877f2;color:#fff">f</span><span>${T('facebookBtn')}</span>
+  </button>`;
+}
+
+function buildLogin(){
+  return axShell(T('li'), `
+  <div class="ax-h1">${T('li')}</div>
+  ${axField(T('em'),'lgEm','email','you@email.com','autocomplete="email"')}
+  ${axField(T('pw'),'lgPw','password','','autocomplete="current-password"','lgEye')}
+  <div style="text-align:right;margin:2px 6px 8px"><button type="button" class="ax-link ax-link-w" id="lgFP">${T('fp')}</button></div>
+  ${buildCaptchaBox('lgCaptcha')}
+  <div class="ax-actions"><button type="button" class="ax-btn" id="lgBtn">${T('li')}</button></div>
+  ${buildSocialButtons()}
+  <div style="text-align:center;margin-top:14px"><button type="button" class="ax-link ax-link-w" id="lgLang">${T('languageBtn')}</button></div>
+  `, `<div class="ax-foot">${T('na')} <button type="button" class="ax-link" id="lgToReg">${T('reg')}</button>
+  <div class="ax-legal"><a href="privacy.html" onclick="openLink('privacy.html');return false;">${T('privacyPolicyLink')}</a> &nbsp;•&nbsp; <a href="terms.html" onclick="openLink('terms.html');return false;">${T('termsOfServiceLink')}</a></div></div>`);
+}
+
 function buildRegister(){
   // URL থেকে referral code auto-fill
   const urlRef = new URLSearchParams(window.location.search).get('ref')||
                  new URLSearchParams(window.location.search).get('r')||'';
   if(urlRef && !S.regRefCode) S.regRefCode = urlRef.toUpperCase();
-  return `<div class="aw fu"><div class="ac">
-  <span class="al">◆</span>
-  <div class="a-brand">${T('appName')}</div>
-  <div class="a-sub">${T('appTag')}</div>
-
-  <!-- Worker / Employer Choice -->
-  <div style="margin-bottom:18px">
-    <div style="font-size:13px;font-weight:700;color:#0f172a;text-align:center;margin-bottom:10px">${T('whatToDoTitle')}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div id="choiceWorker" onclick="selectChoice('worker')" style="border:2px solid #2563eb;background:#eff6ff;border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer">
-        <div style="font-size:24px;margin-bottom:6px">💪</div>
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#2563eb">${T('choiceEarnTitle')}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:3px">${T('choiceEarnDesc')}</div>
-      </div>
-      <div id="choiceEmployer" onclick="selectChoice('employer')" style="border:2px solid #dbeafe;background:#fff;border-radius:14px;padding:14px 10px;text-align:center;cursor:pointer">
-        <div style="font-size:24px;margin-bottom:6px">📢</div>
-        <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:#475569">${T('choiceServiceTitle')}</div>
-        <div style="font-size:10px;color:#64748b;margin-top:3px">${T('choiceServiceDesc')}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Worker Form -->
-  <div id="workerForm">
-    <div class="a-ttl">${T('reg')}</div>
-    <label class="lbl">${T('nm')}</label>
-    <input class="inp" id="rgNm" type="text" placeholder="${T('namePlaceholder')}" autocomplete="name">
-    <label class="lbl">${T('em')}</label>
-    <input class="inp" id="rgEm" type="email" placeholder="you@email.com" autocomplete="email">
-    <label class="lbl">${T('pw')}</label>
-    <div class="ipw"><input class="inp" id="rgPw" type="password" placeholder="${T('pwMinPlaceholder')}"><button class="ipe" id="rgEye">👁</button></div>
-    <label class="lbl">${T('cpw')}</label>
-    <input class="inp" id="rgCpw" type="password" placeholder="${T('repeatPwPlaceholder')}">
-    <label class="lbl">${T('rc')}</label>
-    <input class="inp" id="rgRef" type="text" placeholder="XXXXXX" value="${S.regRefCode||''}">
-    <div style="background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:10px 13px;font-size:12px;color:#2563eb;margin-bottom:14px">${T('regPromo')}</div>
-    ${buildCaptchaBox('rgCaptcha')}
-    <button class="btn bp mb12" id="rgBtn">${T('reg')}</button>
-    <div style="text-align:center;font-size:13px;color:#64748b">${T('ha')} <button style="background:none;border:none;cursor:pointer;font-size:13px;color:#2563eb;font-family:inherit" id="rgToLi">${T('li')}</button></div>
-    ${buildSocialButtons()}
-    <div style="text-align:center;font-size:11px;color:#94a3b8;margin-top:12px">
-      ${T('legalAgree')}
-      <a href="terms.html" onclick="openLink('terms.html');return false;" style="color:#2563eb">${T('termsWord')}</a> ${T('andWord')}
-      <a href="privacy.html" onclick="openLink('privacy.html');return false;" style="color:#2563eb">${T('privacyWord')}</a>
-    </div>
-  </div>
-  </div></div>`;
+  return axShell(T('reg'), `
+  <div class="ax-h1">${T('reg')}</div>
+  ${axField(T('nm'),'rgNm','text',T('namePlaceholder'),'autocomplete="name"')}
+  ${axField(T('em'),'rgEm','email','you@email.com','autocomplete="email"')}
+  ${axField(T('pw'),'rgPw','password',T('pwMinPlaceholder'),'autocomplete="new-password"','rgEye')}
+  ${axField(T('cpw'),'rgCpw','password',T('repeatPwPlaceholder'),'autocomplete="new-password"','rgEye2')}
+  ${axField(T('rc'),'rgRef','text','XXXXXX',`value="${S.regRefCode||''}"`)}
+  <div class="ax-promo">${T('regPromo')}</div>
+  ${buildCaptchaBox('rgCaptcha')}
+  <div class="ax-actions"><button type="button" class="ax-btn" id="rgBtn">${T('reg')}</button></div>
+  ${buildSocialButtons()}
+  `, `<div class="ax-foot">${T('ha')} <button type="button" class="ax-link" id="rgToLi">${T('li')}</button>
+  <div class="ax-legal">${T('legalAgree')}
+    <a href="terms.html" onclick="openLink('terms.html');return false;">${T('termsWord')}</a> ${T('andWord')}
+    <a href="privacy.html" onclick="openLink('privacy.html');return false;">${T('privacyWord')}</a></div>
+  <div class="ax-legal"><a href="services.html" onclick="openLink('services.html');return false;">${T('choiceServiceTitle')}</a></div></div>`);
 }
 
 function selectChoice(type){
@@ -358,48 +365,41 @@ function selectChoice(type){
     openLink('services.html');
   }
 }
-// ⚠️ ফিক্স: আগে এখানে "✅ I've Verified" বাটন ছিল যেটা sb.auth.getUser()
-// দিয়ে চেক করত (এর জন্য একটা active session লাগত)। এখন OTP কোড দিয়ে
-// ভেরিফাই করা হয় — কোনো session ছাড়াই sb.auth.verifyOtp() কল করা যায়,
-// তাই register()-এর পরে sign-out করা থাকলেও এটা নির্ভরযোগ্যভাবে কাজ করে।
+
+//  OTP ভেরিফিকেশন পেজ (রেজিস্টারের পর ইমেইলে আসা কোড)
 function buildVerify(){
-  return `<div class="aw fu"><div class="ac">
-  <span class="al">✉️</span>
-  <div class="a-brand" style="margin-bottom:8px">${T('otpTitle')}</div>
-  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:22px">${T('otpDesc')}</p>
-  <input class="inp" id="veOtp" type="text" inputmode="numeric" maxlength="10" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:4px;font-size:18px;font-weight:700" autocomplete="one-time-code">
-  <button class="btn bp mb12" id="veChk" style="margin-top:14px">${T('otpSubmit')}</button>
-  <button class="btn bh mb12" id="veRe">${T('re')}</button>
-  <button class="btn br" id="veLo">${T('lo')}</button>
-  </div></div>`;
+  return axShell(T('otpTitle'), `
+  <div class="ax-h1">${T('otpTitle')}</div>
+  <p class="ax-p">${T('otpDesc')}</p>
+  <div class="ax-f"><input class="ax-inp ax-otp" id="veOtp" type="text" inputmode="numeric" maxlength="10" placeholder="${T('otpPlaceholder')}" autocomplete="one-time-code"></div>
+  <div class="ax-actions"><button type="button" class="ax-btn" id="veChk">${T('otpSubmit')}</button></div>
+  <div class="ax-actions"><button type="button" class="ax-btn ax-btn-w" id="veRe">${T('re')}</button></div>
+  <div class="ax-actions"><button type="button" class="ax-btn ax-btn-r" id="veLo">${T('lo')}</button></div>
+  `);
 }
 
-// ধাপ ১ — ইমেইল দিয়ে রিসেট কোড চাওয়া
+//  পাসওয়ার্ড ভুলে গেলে: ইমেইল দিয়ে OTP পাঠানো
 function buildForgot(){
-  return `<div class="aw fu"><div class="ac">
-  <span class="al">🔑</span>
-  <div class="a-brand" style="margin-bottom:8px">${T('rp')}</div>
-  <p style="font-size:12px;color:#f59e0b;text-align:center;margin-bottom:16px">⚠️ ${T('fpn')}</p>
-  <label class="lbl">${T('em')}</label>
-  <input class="inp" id="fpEm" type="email" placeholder="${T('registeredEmailPlaceholder')}">
+  return axShell(T('rp'), `
+  <div class="ax-h1">${T('rp')}</div>
+  <p class="ax-p ax-p-note">${T('fpn')}</p>
+  ${axField(T('em'),'fpEm','email',T('registeredEmailPlaceholder'))}
   ${buildCaptchaBox('fpCaptcha')}
-  <button class="btn bp mb12" id="fpBtn">${T('rp')}</button>
-  <button class="btn bh" id="fpBack">${T('back')}</button>
-  </div></div>`;
+  <div class="ax-actions"><button type="button" class="ax-btn" id="fpBtn">${T('rp')}</button></div>
+  <div class="ax-actions"><button type="button" class="ax-btn ax-btn-w" id="fpBack">${T('back')}</button></div>
+  `);
 }
 
-// ⚠️ নতুন — ধাপ ২: কোড + নতুন পাসওয়ার্ড (buildForgot সফল হলে এখানে আসে)
+//  পাসওয়ার্ড রিসেট: OTP + নতুন পাসওয়ার্ড
 function buildResetOtp(){
-  return `<div class="aw fu"><div class="ac">
-  <span class="al">🔑</span>
-  <div class="a-brand" style="margin-bottom:8px">${T('resetOtpTitle')}</div>
-  <p style="font-size:13px;color:#64748b;text-align:center;line-height:1.65;margin-bottom:18px">${T('resetOtpDesc')}</p>
-  <input class="inp" id="roOtp" type="text" inputmode="numeric" maxlength="10" placeholder="${T('otpPlaceholder')}" style="text-align:center;letter-spacing:4px;font-size:18px;font-weight:700;margin-bottom:14px" autocomplete="one-time-code">
-  <label class="lbl">${T('newPasswordPlaceholder')}</label>
-  <div class="ipw"><input class="inp" id="roPw" type="password" placeholder="${T('pwMinPlaceholder')}"><button class="ipe" id="roEye">👁</button></div>
-  <button class="btn bp mb12" id="roBtn" style="margin-top:8px">${T('resetOtpSubmit')}</button>
-  <button class="btn bh" id="roBack">${T('back')}</button>
-  </div></div>`;
+  return axShell(T('resetOtpTitle'), `
+  <div class="ax-h1">${T('resetOtpTitle')}</div>
+  <p class="ax-p">${T('resetOtpDesc')}</p>
+  <div class="ax-f"><input class="ax-inp ax-otp" id="roOtp" type="text" inputmode="numeric" maxlength="10" placeholder="${T('otpPlaceholder')}" autocomplete="one-time-code"></div>
+  ${axField(T('newPasswordPlaceholder'),'roPw','password',T('pwMinPlaceholder'),'autocomplete="new-password"','roEye')}
+  <div class="ax-actions"><button type="button" class="ax-btn" id="roBtn">${T('resetOtpSubmit')}</button></div>
+  <div class="ax-actions"><button type="button" class="ax-btn ax-btn-w" id="roBack">${T('back')}</button></div>
+  `);
 }
 
 async function attachAuthEvents(){
@@ -440,13 +440,12 @@ async function attachAuthEvents(){
       const savedRef=localStorage.getItem('ez_ref')||'';
       if(savedRef){
         rgRefEl.value=savedRef;
-        rgRefEl.style.borderColor='#059669';
-        rgRefEl.style.background='#f0fdf4';
-        // Helpful hint
+        // Helpful hint (ইনপুটের pill-এর বাইরে বসবে)
         const hint=document.createElement('div');
-        hint.style.cssText='font-size:11px;color:#059669;margin-top:4px;margin-bottom:8px';
+        hint.style.cssText='font-size:12px;font-weight:700;color:#fff;text-align:center;margin:6px 0 8px';
         hint.textContent='✅ Referral code applied automatically!';
-        rgRefEl.parentNode.insertBefore(hint, rgRefEl.nextSibling);
+        const anchor = rgRefEl.closest('.ax-f') || rgRefEl;
+        anchor.parentNode.insertBefore(hint, anchor.nextSibling);
       }
     }
     rgBtn.onclick=async()=>{
