@@ -576,20 +576,28 @@ const NAV_ICONS = {
 };
 
 function buildBottomNav(){
+  // NOTE: wallet/offers/offerwall/referral বাদ দেওয়া হয়েছে — এই পেজগুলোতে যাওয়ার বাটন
+  // হোম স্ক্রিনেই (Withdraw বাটন + Quick Actions কার্ড) আলাদাভাবে আছে, তাই bottom nav-এ
+  // ডুপ্লিকেট রাখা হয়নি। এই ফাংশনের ওল্ড ভার্সন (৮টা ট্যাব) সরানো হলো, কোনো ফিচার মুছে
+  // ফেলা হয়নি — শুধু ওই পেজগুলোতে যাওয়ার এই একটা রাস্তা কমানো হয়েছে।
+  //
+  // ICON SOURCE: প্রতিটা ট্যাবের আইকন এখন repo-র icons/nav-*.png থেকে লোড হয় (ইউজার নিজে
+  // GitHub-এ আপলোড দেবে)। ইমেজ এখনো আপলোড না হলে বা লোড fail করলে onerror দিয়ে আগের
+  // emoji/SVG আইকনে fallback হয়ে যায় — তাই কোনো অবস্থাতেই nav bar ভাঙবে না বা খালি দেখাবে না।
   const pages=[
-    {p:'home',ic:NAV_ICONS.home,lb:T('db')},
-    {p:'wallet',ic:NAV_ICONS.wallet,lb:T('wl')},
-    {p:'offers',ic:NAV_ICONS.target,lb:T('of')},
-    {p:'offerwall',ic:NAV_ICONS.globe,lb:T('navWall')},
-    {p:'spin',ic:NAV_ICONS.spin,lb:T('navSpin')},
-    {p:'social',ic:NAV_ICONS.social,lb:T('navSocial')},
-    {p:'referral',ic:NAV_ICONS.users,lb:T('navRefer')},
-    {p:'profile',ic:NAV_ICONS.user,lb:T('pr')},
+    {p:'home',   ic:NAV_ICONS.home,   lb:T('db'),        img:'icons/nav-home.png'},
+    {p:'spin',   ic:NAV_ICONS.spin,   lb:T('navSpin'),   img:'icons/nav-spin.png'},
+    {p:'social', ic:NAV_ICONS.social, lb:T('navSocial'), img:'icons/nav-social.png'},
+    {p:'profile',ic:NAV_ICONS.user,   lb:T('pr'),        img:'icons/nav-profile.png'},
   ];
-  // পেজ বেশি (৮টা), তাই ছোট হয়ে চাপাচাপি/কাটা না গিয়ে সাইডে স্ক্রল হয় — আইকন-লেবেলও বড়
-  return `<nav class="bnav bnav-scroll">${pages.map(pg=>`
+  return `<nav class="bnav">${pages.map(pg=>`
   <button class="bni${S.page===pg.p?' on':''}" data-page="${pg.p}">
-    <span class="ic">${pg.ic}</span><span class="lb">${pg.lb}</span>
+    <span class="ic">
+      <img class="bni-img" src="${pg.img}" alt="" loading="lazy"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='inline-flex'">
+      <span class="bni-fallback" style="display:none">${pg.ic}</span>
+    </span>
+    <span class="lb">${pg.lb}</span>
   </button>`).join('')}</nav>`;
 }
 
@@ -801,7 +809,8 @@ function buildHome(){
   const ud=S.userData||{};
   const today=new Date().toDateString();
   const todayEarn=ud.todayDate===today?(ud.todayEarned||0):0;
-  return `${buildHomeHeader()}
+  return `<div class="home-top-glow">
+  ${buildHomeHeader()}
   <div class="hero hero-grad">
     <div style="font-size:11px;color:rgba(255,255,255,.75);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.09em">${T('yourEarningsLabel')}</div>
     <div class="sf" style="font-size:36px;font-weight:800;color:#fff" id="liveHeroBal">${fmt$(ud.usdEarned||0)}</div>
@@ -812,6 +821,7 @@ function buildHome(){
     <div class="sc sc-2"><div class="sc-i">✅</div><div class="sc-v" style="color:#fff">${ud.offersCompleted||0}</div><div class="sc-l">${T('oc')}</div></div>
     <div class="sc sc-3"><div class="sc-i">👥</div><div class="sc-v" style="color:#fff">${ud.activeReferrals||0}</div><div class="sc-l">${T('refCount')}</div></div>
     <div class="sc sc-4"><div class="sc-i">💵</div><div class="sc-v" style="color:#fff">${fmt$(todayEarn)}</div><div class="sc-l">${T('todayEarn')}</div></div>
+  </div>
   </div>
 
   ${buildQuickActions()}
