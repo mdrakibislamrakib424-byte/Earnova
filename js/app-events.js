@@ -6,6 +6,19 @@ async function attachAppEvents(){
   const mn=$('#navMenu'); if(mn) mn.onclick=openSidebar;
   // Avatar
   const av=$('#navAv'); if(av) av.onclick=()=>navTo('profile');
+  // 🆕 Home-page হেডার (profile pic / bell) — নতুন ডিজাইনে
+  const hhAv=$('#hhAv'); if(hhAv) hhAv.onclick=()=>navTo('profile');
+  const hhBell=$('#hhBell'); if(hhBell) hhBell.onclick=()=>navTo('notices');
+  // 🆕 Quick Actions-এর Daily Bonus — এটা manual claim না, স্বয়ংক্রিয়ভাবেই লগইনে যোগ হয়ে যায়
+  const qaDb=$('#qaDailyBonus'); if(qaDb) qaDb.onclick=()=>{
+    const ud=S.userData||{};
+    const today=new Date().toDateString();
+    if(ud.dailyBonusDate===today){
+      toast(T('dailyBonusClaimedTodayMsg'),'s',3500);
+    } else {
+      toast(T('dailyBonusAutoInfoMsg'),'i',4000);
+    }
+  };
   // Brand
   const br=$('.nav-bnd'); if(br) br.onclick=()=>navTo('home');
   // Wall cards
@@ -369,7 +382,7 @@ fAuth.onAuthStateChanged(async user=>{
         // Balance notification — app খুললে balance দেখে push পাঠায় (3s delay)
         setTimeout(()=> checkBalanceNotification(), 3000);
         // Review popup — 24h পরপর
-        //setTimeout(()=> checkReviewPopup(), 5000);
+        setTimeout(()=> checkReviewPopup(), 5000);
       }
       loadLeaderboard();
       startLiveTicker();
@@ -504,6 +517,17 @@ async function loadAdminSettings(c){
     <div style="display:flex;gap:8px">
       <button class="btn bp bau" style="flex:1" onclick="saveAnnouncement()">💾 Save Banner</button>
       <button class="btn br bau" onclick="clearAnnouncement()">🗑️ Clear</button>
+    </div>
+  </div>
+
+  <!-- 🆕 Community News Video (Home page-এ দেখানো হয়) -->
+  <div class="card mb12">
+    <div class="card-hd">📺 Community News Video</div>
+    <div style="font-size:12px;color:#475569;margin-bottom:10px">YouTube, Facebook বা TikTok ভিডিও-র লিংক দিন — Home page-এ সবার জন্য embed হয়ে দেখাবে। খালি রাখলে ভিডিও দেখাবে না।</div>
+    <input type="text" id="communityVideoInput" placeholder="e.g. https://youtube.com/watch?v=..." value="${(()=>{ const v=cfg.communityVideo; const raw=(v&&typeof v==='object')?v.data:v; if(!raw) return ''; try{ const p=JSON.parse(raw); return p?.url||''; }catch(e){ return typeof raw==='string'?raw:''; } })()}" style="width:100%;padding:10px 13px;border:1.5px solid #dbeafe;border-radius:10px;font-size:13px;background:#f8fafc;color:#0f172a;outline:none;font-family:inherit;margin-bottom:10px">
+    <div style="display:flex;gap:8px">
+      <button class="btn bp bau" style="flex:1" onclick="saveCommunityVideo()">💾 Save Video</button>
+      <button class="btn br bau" onclick="clearCommunityVideo()">🗑️ Remove</button>
     </div>
   </div>
 
@@ -827,17 +851,41 @@ async function saveAnnouncement(){
   const val=document.getElementById('announcementInput')?.value?.trim()||'';
   // ✅ settings table এ data column এ save করো
   await sb.from('settings').upsert({id:'announcement', data:val},{onConflict:'id'}).catch(()=>{});
-  S.siteSettings={announcement:val};
+  S.siteSettings={...(S.siteSettings||{}), announcement:val};
   EZCache.invalidate('settings_announcement');
   showToast('✅ Announcement saved!','green');
 }
 async function clearAnnouncement(){
   await sb.from('settings').upsert({id:'announcement', data:''},{onConflict:'id'}).catch(()=>{});
-  S.siteSettings={announcement:''};
+  S.siteSettings={...(S.siteSettings||{}), announcement:''};
   EZCache.invalidate('settings_announcement');
   const inp=document.getElementById('announcementInput');
   if(inp) inp.value='';
   showToast('🗑️ Announcement cleared','blue');
+}
+
+// 🆕 Community News Video — admin panel থেকে YouTube/Facebook/TikTok লিংক সেট/মুছে ফেলা
+async function saveCommunityVideo(){
+  const val=document.getElementById('communityVideoInput')?.value?.trim()||'';
+  if(val && !communityVideoEmbedUrl(val)){
+    showToast('⚠️ এই লিংকটা চেনা যায়নি — YouTube/Facebook/TikTok লিংক দিন','red');
+    return;
+  }
+  const payload = val ? JSON.stringify({url:val}) : '';
+  await sb.from('settings').upsert({id:'communityVideo', data:payload},{onConflict:'id'}).catch(()=>{});
+  S.siteSettings={...(S.siteSettings||{}), communityVideo: val ? {url:val} : null};
+  EZCache.invalidate('settings_communityVideo');
+  showToast(val ? '✅ Video saved!' : '🗑️ Video removed', val ? 'green' : 'blue');
+  if(S.page==='home') render();
+}
+async function clearCommunityVideo(){
+  await sb.from('settings').upsert({id:'communityVideo', data:''},{onConflict:'id'}).catch(()=>{});
+  S.siteSettings={...(S.siteSettings||{}), communityVideo: null};
+  EZCache.invalidate('settings_communityVideo');
+  const inp=document.getElementById('communityVideoInput');
+  if(inp) inp.value='';
+  showToast('🗑️ Video removed','blue');
+  if(S.page==='home') render();
 }
 
 
