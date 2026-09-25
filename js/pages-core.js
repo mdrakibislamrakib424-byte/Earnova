@@ -512,15 +512,16 @@ function renderApp(){
   else if(S.page==='wallview') html+=buildWallView(S.unlockWallId);
   else if(S.page==='wallframe') html+=buildWallFramePage();
   else if(S.page==='leaderboard') html+=buildLeaderboardPage();
+  else if(S.page==='spin') html+=buildSpinPage();
   else html+=buildHome();
   // Universal review bar — সব logged-in page-এর নিচে
-//  if(S.user && !localStorage.getItem(REVIEW_LS_KEY)){
-   // html+=`<div style="margin:8px 16px 16px;background:linear-gradient(135deg,#fffbeb,#f0fdf4);border:1.5px solid #fde68a;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-     // <span style="font-size:20px">⭐</span>
-     // <div style="flex:1;font-size:12px;color:#92400e;font-weight:600">${T('reviewBarText')}</div>
-    //  <button onclick="showReviewPopup()" style="background:#f59e0b;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0">${T('reviewBarBtn')}</button>
-   // </div>`;
- // }
+  if(S.user && !localStorage.getItem(REVIEW_LS_KEY)){
+    html+=`<div style="margin:8px 16px 16px;background:linear-gradient(135deg,#fffbeb,#f0fdf4);border:1.5px solid #fde68a;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:20px">⭐</span>
+      <div style="flex:1;font-size:12px;color:#92400e;font-weight:600">${T('reviewBarText')}</div>
+      <button onclick="showReviewPopup()" style="background:#f59e0b;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0">${T('reviewBarBtn')}</button>
+    </div>`;
+  }
   html+=`</div></div>`;
   html+=buildBottomNav();
   $('#app').innerHTML=html;
@@ -571,6 +572,7 @@ const NAV_ICONS = {
   mail:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 6-10 7L2 6"/></svg>',
   ticket:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V9z"/><line x1="9" y1="7" x2="9" y2="17"/></svg>',
   gear:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  spin:    '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 3"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>',
 };
 
 function buildBottomNav(){
@@ -579,11 +581,13 @@ function buildBottomNav(){
     {p:'wallet',ic:NAV_ICONS.wallet,lb:T('wl')},
     {p:'offers',ic:NAV_ICONS.target,lb:T('of')},
     {p:'offerwall',ic:NAV_ICONS.globe,lb:T('navWall')},
+    {p:'spin',ic:NAV_ICONS.spin,lb:T('navSpin')},
     {p:'social',ic:NAV_ICONS.social,lb:T('navSocial')},
     {p:'referral',ic:NAV_ICONS.users,lb:T('navRefer')},
     {p:'profile',ic:NAV_ICONS.user,lb:T('pr')},
   ];
-  return `<nav class="bnav">${pages.map(pg=>`
+  // পেজ বেশি (৮টা), তাই ছোট হয়ে চাপাচাপি/কাটা না গিয়ে সাইডে স্ক্রল হয় — আইকন-লেবেলও বড়
+  return `<nav class="bnav bnav-scroll">${pages.map(pg=>`
   <button class="bni${S.page===pg.p?' on':''}" data-page="${pg.p}">
     <span class="ic">${pg.ic}</span><span class="lb">${pg.lb}</span>
   </button>`).join('')}</nav>`;
@@ -733,22 +737,86 @@ async function updateWallCardStatuses(){
   }
 }
 
+// ══════════════════════════════════════════════════════════
+//  HOME PAGE হেডার/কার্ড — নতুন ডিজাইন (রেফারেন্স স্ক্রিনশট অনুযায়ী)
+// ══════════════════════════════════════════════════════════
+function buildHomeHeader(){
+  const ud=S.userData||{};
+  const initial=escapeHtml((ud.name||ud.email||'?')[0].toUpperCase());
+  const hasNotice=S.noticeQueue.length>0;
+  return `<div class="hh-top">
+    <button class="hh-av" id="hhAv">${initial}</button>
+    <div class="hh-brand"><img src="icon.png" alt="" onerror="this.style.display='none'"><span>${T('appName')}</span></div>
+    <button class="hh-bell${hasNotice?' has-dot':''}" id="hhBell">${NAV_ICONS.bell}${hasNotice?'<span class="hh-dot"></span>':''}</button>
+  </div>
+  <div class="hh-welcome">${T('welcomeToWord')} ${T('appName')}, ${escapeHtml(ud.name||ud.email?.split('@')[0]||'User')}!</div>`;
+}
+
+function buildQuickActions(){
+  const items=[
+    {page:'offers', icon:'💼', label:T('qaOffersLabel')},
+    {id:'qaDailyBonus', icon:'🎁', label:T('qaDailyBonusLabel')},
+    {page:'offerwall', icon:'🌐', label:T('qaWallLabel')},
+    {page:'referral', icon:'👥', label:T('qaReferLabel')},
+  ];
+  return `<div class="card mb12">
+    <div class="card-hd">${T('quickActionsTitle')}</div>
+    <div class="qa-grid">
+      ${items.map(it=>`<button class="qa-item" ${it.page?`data-page="${it.page}"`:`id="${it.id}"`}>
+        <span class="qa-ic">${it.icon}</span><span class="qa-lb">${it.label}</span>
+      </button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function buildRecentActivities(){
+  const list=(typeof getActivityLog==='function'?getActivityLog():[]).slice(0,4);
+  return `<div class="card mb12">
+    <div class="card-hd">${T('recentActivitiesTitle')}</div>
+    ${list.length? list.map(a=>{
+      const pos=a.amount>=0;
+      return `<div class="ra-item">
+        <span class="ra-ic ${pos?'up':'dn'}">${pos?'+':'−'}</span>
+        <div style="flex:1;min-width:0">
+          <div class="ra-t">${pos?T('activityEarnedWord'):T('activityDeductedWord')}</div>
+          <div class="ra-s">${timeAgoLabel(a.t)}</div>
+        </div>
+        <div class="ra-amt ${pos?'up':'dn'}">${pos?'+':'-'}${fmt$(Math.abs(a.amount))}</div>
+      </div>`;
+    }).join('') : `<div style="text-align:center;padding:14px 0;color:#94a3b8;font-size:12px">${T('noActivityMsg')}</div>`}
+  </div>`;
+}
+
+function buildCommunityNews(){
+  const cv=S.siteSettings?.communityVideo;
+  const embed=cv?.url ? communityVideoEmbedUrl(cv.url) : null;
+  return `<div class="card mb12">
+    <div class="card-hd">${T('communityNewsTitle')}</div>
+    ${embed?`<div class="cn-video"><iframe src="${embed}" frameborder="0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`
+      :`<div style="text-align:center;padding:18px 0;color:#94a3b8;font-size:12px">📺 ${T('noCommunityVideoMsg')}</div>`}
+  </div>`;
+}
+
 function buildHome(){
   const ud=S.userData||{};
   const today=new Date().toDateString();
   const todayEarn=ud.todayDate===today?(ud.todayEarned||0):0;
-  return `<div class="ph"><div class="pt">👋 ${escapeHtml(ud.name||ud.email?.split('@')[0]||'User')}</div><div class="ps">${T('homeWelcome')}</div></div>
-  <div class="hero">
-    <div class="hg1"></div><div class="hg2"></div>
-    <div style="font-size:11px;color:#a78bfa;font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.09em">${T('yourEarningsLabel')}</div>
-    <div class="sf" style="font-size:36px;font-weight:800;color:#fbbf24" id="liveHeroBal">${fmt$(ud.usdEarned||0)}</div>
-    <div style="font-size:12px;color:#475569;margin-top:4px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
+  return `${buildHomeHeader()}
+  <div class="hero hero-grad">
+    <div style="font-size:11px;color:rgba(255,255,255,.75);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.09em">${T('yourEarningsLabel')}</div>
+    <div class="sf" style="font-size:36px;font-weight:800;color:#fff" id="liveHeroBal">${fmt$(ud.usdEarned||0)}</div>
+    <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
+    <button class="btn hero-withdraw-btn" data-page="wallet">💸 ${T('withdrawWord')}</button>
   </div>
   <div class="sgd">
     <div class="sc sc-2"><div class="sc-i">✅</div><div class="sc-v" style="color:#fff">${ud.offersCompleted||0}</div><div class="sc-l">${T('oc')}</div></div>
     <div class="sc sc-3"><div class="sc-i">👥</div><div class="sc-v" style="color:#fff">${ud.activeReferrals||0}</div><div class="sc-l">${T('refCount')}</div></div>
     <div class="sc sc-4"><div class="sc-i">💵</div><div class="sc-v" style="color:#fff">${fmt$(todayEarn)}</div><div class="sc-l">${T('todayEarn')}</div></div>
   </div>
+
+  ${buildQuickActions()}
+  ${buildRecentActivities()}
+  ${buildCommunityNews()}
 
   <!-- TOTAL PAID OUT — বিশ্বাসযোগ্যতা বাড়ানোর জন্য, App যে আসল টাকা দেয় সেটা দেখানো -->
   <div id="totalPaidOutBox" class="card mb12" style="text-align:center;background:linear-gradient(135deg,rgba(5,150,105,.06),rgba(37,99,235,.06));border:1.5px solid #bbf7d0">
@@ -758,9 +826,6 @@ function buildHome(){
 
   <!-- LIVE PAYOUT TICKER — সাম্প্রতিক approved withdrawal (মাস্কড নাম) স্ক্রল করে দেখায় -->
   <div id="payoutTicker" style="display:none;background:#fff;border:1.5px solid #e0eaff;border-radius:12px;padding:8px 12px;margin-bottom:12px;overflow:hidden;white-space:nowrap;font-size:12px;color:#334155"></div>
-
-  <!-- 🎡 DAILY SPIN WHEEL -->
-  ${buildSpinWheelCard()}
 
   <!-- LEVEL & STREAK CARD -->
   <div class="card mb12" style="padding:14px 16px">
@@ -846,6 +911,12 @@ function buildHome(){
     <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.09em;font-weight:700;margin-bottom:6px">◆ EARNOVA</div>
     <div style="font-size:10px;color:#cbd5e1">${T('copyrightText')}</div>
   </div>`;
+}
+
+// ─── SPIN PAGE (আলাদা bottom-nav ট্যাব — আগে home-এ সরাসরি ছিল) ──────────
+function buildSpinPage(){
+  return `<div class="ph"><div class="pt">🎡 ${T('spinPageTitle')}</div><div class="ps">${T('spinPageSub')}</div></div>
+  ${buildSpinWheelCard()}`;
 }
 
 // ─── WALLET PAGE ──────────────────────────────────────
