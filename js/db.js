@@ -1165,8 +1165,14 @@ function setupListeners(uid){
   const uRef=fDB.ref(`users/${uid}`);
   const unsubUser=uRef.on('value',snap=>{
     const raw = snap.val();
+    const _prevBal = typeof S.userData?.usdEarned==='number' ? S.userData.usdEarned : null;
     // ✅ Fix 1: snake_case → camelCase convert করতে হবে
     S.userData = raw ? _userFromDB(raw) : raw;
+    // 🆕 Recent Activities: balance বদলালে (ad reward, offer, spin, referral, withdraw...) লগ হবে
+    if(_prevBal!==null && S.userData && typeof S.userData.usdEarned==='number'){
+      const diff = S.userData.usdEarned - _prevBal;
+      if(Math.abs(diff) >= 0.001) logActivity(diff);
+    }
     EZCache.set(`users/${uid}`, S.userData);
     // ✅ Fix 2: Admin approve হলে user এর completedTasks cache update
     if(S.userData?.completedTasks){
