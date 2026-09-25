@@ -317,7 +317,63 @@ async function loadPayoutSettings(){
     ann = (aVal && typeof aVal==='object') ? (aVal.data||'') : (aVal||'');
     EZCache.set('settings_announcement', ann);
   }
-  if(ann) S.siteSettings={announcement:ann};
+  if(ann) S.siteSettings={...(S.siteSettings||{}), announcement:ann};
+
+  // 🆕 Community News video (admin এডমিন প্যানেল থেকে বসায়/মুছে) — cached
+  let cv = EZCache.get('settings_communityVideo');
+  if(cv===null || cv===undefined){
+    const cvSnap = await fDB.ref('settings/communityVideo').once('value');
+    const cvVal = cvSnap.val();
+    let raw = (cvVal && typeof cvVal==='object') ? (cvVal.data||'') : (cvVal||'');
+    if(typeof raw==='string' && raw){ try{ raw=JSON.parse(raw); }catch(e){ raw={url:raw}; } }
+    cv = (raw && raw.url) ? raw : null;
+    EZCache.set('settings_communityVideo', cv||'');
+  }
+  if(cv) S.siteSettings={...(S.siteSettings||{}), communityVideo: cv};
+}
+
+// ══════════════════════════════════════════════════════════
+//  RECENT ACTIVITIES — home page-এ দেখানোর জন্য, ফোনেই (localStorage) রাখা হয়
+// ══════════════════════════════════════════════════════════
+const ACTIVITY_LOG_KEY = 'ez_activity_log';
+const ACTIVITY_LOG_MAX = 12;
+function logActivity(amount){
+  try{
+    const list = getActivityLog();
+    list.unshift({ amount, t: Date.now() });
+    localStorage.setItem(ACTIVITY_LOG_KEY, JSON.stringify(list.slice(0, ACTIVITY_LOG_MAX)));
+  }catch(e){}
+}
+function getActivityLog(){
+  try{ return JSON.parse(localStorage.getItem(ACTIVITY_LOG_KEY)||'[]'); }catch(e){ return []; }
+}
+function timeAgoLabel(ts){
+  const s = Math.max(1, Math.floor((Date.now()-ts)/1000));
+  if(s<60) return `${s}s`;
+  const m=Math.floor(s/60); if(m<60) return `${m}m`;
+  const h=Math.floor(m/60); if(h<24) return `${h}h`;
+  return `${Math.floor(h/24)}d`;
+}
+
+// ══════════════════════════════════════════════════════════
+//  COMMUNITY VIDEO — YouTube/Facebook/TikTok লিংক থেকে embed URL বানানো
+// ══════════════════════════════════════════════════════════
+function communityVideoEmbedUrl(url){
+  if(!url) return null;
+  try{
+    if(/youtu\.?be/i.test(url)){
+      const m = url.match(/(?:v=|youtu\.be\/|embed\/)([A-Za-z0-9_-]{6,})/);
+      if(m) return `https://www.youtube.com/embed/${m[1]}`;
+    }
+    if(/tiktok\.com/i.test(url)){
+      const m = url.match(/video\/(\d+)/);
+      if(m) return `https://www.tiktok.com/embed/v2/${m[1]}`;
+    }
+    if(/facebook\.com|fb\.watch/i.test(url)){
+      return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=0`;
+    }
+  }catch(e){}
+  return null;
 }
 
 // User cut % — platform যা real payout দেয়, তার এই % টাই user কে দেখানো/দেওয়া হয় (বাকিটা platform fee হিসেবে রাখা হয়)
