@@ -587,25 +587,26 @@ body.dark .switch .slider{background:#334155}
    HOME PAGE রিডিজাইন — profile+logo+bell হেডার, gradient balance
    card, Quick Actions grid, Recent Activities, Community video
    ══════════════════════════════════════════════════════════ */
-/* HOME TOP GLOW — শুধু হেডার+ওয়েলকাম+ব্যালেন্স কার্ড পর্যন্ত গ্র্যাডিয়েন্ট (রেফারেন্স ছবির
-   মতো ঠিক ততটুকুই), এর নিচের stat grid/Quick Actions ইত্যাদি স্বাভাবিক হালকা ব্যাকগ্রাউন্ডে —
-   আগে পুরো stat grid পর্যন্ত টানা ছিল, এখন ছোট করে হুবহু রেফারেন্সের মাপে আনা হলো */
-.home-top-glow{background:linear-gradient(180deg,#1e3a8a 0%,#0f766e 55%,#059669 100%);margin:0 -15px 10px;padding:14px 15px 16px;border-radius:0 0 28px 28px}
+/* HOME TOP GLOW — এখন শুধু হেডার+ওয়েলকাম টেক্সট পর্যন্ত, রেফারেন্স ছবির রঙ থেকে সরাসরি
+   sample করা exact gradient (নীল → টিল-সবুজ)। Balance card এখন এই glow-এর বাইরে/নিচে,
+   card-টা নেগেটিভ margin দিয়ে glow-এর গোল কোণার নিচে সামান্য ঢুকে থাকে (ধনুকের মতো বাঁক),
+   বাকিটা (Last deposit/Withdraw সহ) সাদা ব্যাকগ্রাউন্ডের উপর ভাসে — ঠিক রেফারেন্সের মতো */
+.home-top-glow{background:linear-gradient(135deg,#0a3d82 0%,#0f8f8a 55%,#12b98a 100%);margin:0 -15px 0;padding:14px 15px 40px;border-radius:0 0 30px 30px}
 .home-top-glow .hh-welcome{color:#fff}
 .home-top-glow .hh-brand span{color:#fff}
 .home-top-glow .hh-av{background:rgba(255,255,255,.2);color:#fff;border:1.5px solid rgba(255,255,255,.4)}
 .home-top-glow .hh-bell{background:rgba(255,255,255,.2);color:#fff}
-.home-top-glow .hero-grad{border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 26px rgba(0,0,0,.22)}
-body.dark .home-top-glow{background:linear-gradient(180deg,#0f172a 0%,#0f766e 55%,#047857 100%)}
+.hh-top-min{justify-content:flex-end}
+body.dark .home-top-glow{background:linear-gradient(135deg,#08284f 0%,#0a6e6a 55%,#0d9467 100%)}
 
-/* PROFILE TOP GLOW — home পেজের মতো একই স্টাইলের গ্র্যাডিয়েন্ট, প্রোফাইল হেডার + অ্যাভাটার
-   কার্ড পর্যন্ত, তারপর stats/level ইত্যাদি স্বাভাবিক হালকা ব্যাকগ্রাউন্ডে */
-.profile-top-glow{background:linear-gradient(180deg,#1e3a8a 0%,#0f766e 55%,#059669 100%);margin:0 -15px 14px;padding:14px 15px 18px;border-radius:0 0 28px 28px}
+/* PROFILE TOP GLOW — home পেজের মতো একই স্টাইলের গ্র্যাডিয়েন্ট ও একই arc কাট, প্রোফাইল
+   হেডার পর্যন্ত, তারপর অ্যাভাটার কার্ড (নেগেটিভ margin দিয়ে সামান্য ঢুকে) সাদার উপর */
+.profile-top-glow{background:linear-gradient(135deg,#0a3d82 0%,#0f8f8a 55%,#12b98a 100%);margin:0 -15px 0;padding:14px 15px 38px;border-radius:0 0 30px 30px}
 .profile-top-glow .ph .pt{color:#fff}
 .profile-top-glow .ph .ps{color:rgba(255,255,255,.8)}
-.profile-top-glow .card{background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 26px rgba(0,0,0,.22)}
-body.dark .profile-top-glow{background:linear-gradient(180deg,#0f172a 0%,#0f766e 55%,#047857 100%)}
-body.dark .profile-top-glow .card{background:#1e293b}
+body.dark .profile-top-glow{background:linear-gradient(135deg,#08284f 0%,#0a6e6a 55%,#0d9467 100%)}
+.profile-avatar-card{margin-top:-26px;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 28px rgba(0,0,0,.28)}
+body.dark .profile-avatar-card{background:#1e293b}
 
 /* কার্ড পলিশ — একটু গভীরতা ও নরম বর্ডার, কোনো লেআউট/ফাংশনালিটি বদলায়নি */
 .card{border-radius:18px;box-shadow:0 3px 16px rgba(37,99,235,.08),0 1px 3px rgba(15,23,42,.04)}
@@ -630,8 +631,10 @@ body.dark .profile-top-glow .card{background:#1e293b}
 .hh-dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:1.5px solid #fff}
 .hh-welcome{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#0f172a;line-height:1.25;margin:2px 2px 14px}
 
-.hero-grad{background:linear-gradient(135deg,#0d1b2e 0%,#1e304d 100%);border:none;position:relative;overflow:hidden;text-align:center;padding:20px 18px}
-.hero-withdraw-btn{width:100%;margin-top:14px;background:rgba(255,255,255,.95);color:#065f46;font-weight:800;border:none;border-radius:12px;padding:12px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.hero-grad{background:linear-gradient(135deg,#0d1b2e 0%,#1e304d 100%);border:1px solid rgba(255,255,255,.14);position:relative;overflow:hidden;text-align:left;padding:20px 18px;margin-top:-28px;margin-bottom:14px;box-shadow:0 12px 28px rgba(0,0,0,.28)}
+.hero-coin{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#ffe9a8,#f5b942 55%,#c8811a 100%);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#7a4a06;box-shadow:0 3px 10px rgba(0,0,0,.35),inset 0 1px 2px rgba(255,255,255,.6);flex-shrink:0}
+.hero-withdraw-btn{width:100%;margin-top:14px;background:linear-gradient(180deg,#f4f6f8 0%,#c9d2da 55%,#a9b3bc 100%);color:#0f172a;font-weight:800;border:none;border-radius:12px;padding:12px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;gap:6px}
+.hero-withdraw-btn .hwb-chev{font-size:17px;font-weight:900;line-height:1}
 .hero-withdraw-btn:active{transform:translateY(1px)}
 
 .qa-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
