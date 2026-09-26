@@ -761,17 +761,25 @@ function buildHomeHeader(){
 }
 
 function buildQuickActions(){
+  // ICON SOURCE: bottom nav-এর মতোই — প্রতিটা আইকন icons/qa-*.png থেকে লোড হয় (ইউজার
+  // নিজে GitHub-এ আপলোড দেবে)। ছবি না থাকলে/fail করলে onerror দিয়ে আগের emoji-তে
+  // fallback হয়ে যায়, তাই Quick Actions কখনো ভাঙবে না বা আইকনবিহীন দেখাবে না।
   const items=[
-    {page:'offers', icon:'💼', label:T('qaOffersLabel')},
-    {id:'qaDailyBonus', icon:'🎁', label:T('qaDailyBonusLabel')},
-    {page:'offerwall', icon:'🌐', label:T('qaWallLabel')},
-    {page:'referral', icon:'👥', label:T('qaReferLabel')},
+    {page:'offers', icon:'💼', label:T('qaOffersLabel'),     img:'icons/qa-tasks.png'},
+    {id:'qaDailyBonus', icon:'🎁', label:T('qaDailyBonusLabel'), img:'icons/qa-bonus.png'},
+    {page:'offerwall', icon:'🌐', label:T('qaWallLabel'),    img:'icons/qa-wall.png'},
+    {page:'referral', icon:'👥', label:T('qaReferLabel'),    img:'icons/qa-refer.png'},
   ];
   return `<div class="card mb12">
     <div class="card-hd">${T('quickActionsTitle')}</div>
     <div class="qa-grid">
       ${items.map(it=>`<button class="qa-item" ${it.page?`data-page="${it.page}"`:`id="${it.id}"`}>
-        <span class="qa-ic">${it.icon}</span><span class="qa-lb">${it.label}</span>
+        <span class="qa-ic">
+          <img src="${it.img}" alt="" loading="lazy"
+            onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
+          <span style="display:none">${it.icon}</span>
+        </span>
+        <span class="qa-lb">${it.label}</span>
       </button>`).join('')}
     </div>
   </div>`;
@@ -817,11 +825,12 @@ function buildHome(){
     <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
     <button class="btn hero-withdraw-btn" data-page="wallet">💸 ${T('withdrawWord')}</button>
   </div>
-  <div class="sgd">
-    <div class="sc sc-2"><div class="sc-i">✅</div><div class="sc-v" style="color:#fff">${ud.offersCompleted||0}</div><div class="sc-l">${T('oc')}</div></div>
-    <div class="sc sc-3"><div class="sc-i">👥</div><div class="sc-v" style="color:#fff">${ud.activeReferrals||0}</div><div class="sc-l">${T('refCount')}</div></div>
-    <div class="sc sc-4"><div class="sc-i">💵</div><div class="sc-v" style="color:#fff">${fmt$(todayEarn)}</div><div class="sc-l">${T('todayEarn')}</div></div>
   </div>
+
+  <div class="sgd">
+    <div class="sc sc-2"><div class="sc-i">✅</div><div class="sc-v">${ud.offersCompleted||0}</div><div class="sc-l">${T('oc')}</div></div>
+    <div class="sc sc-3"><div class="sc-i">👥</div><div class="sc-v">${ud.activeReferrals||0}</div><div class="sc-l">${T('refCount')}</div></div>
+    <div class="sc sc-4"><div class="sc-i">💵</div><div class="sc-v">${fmt$(todayEarn)}</div><div class="sc-l">${T('todayEarn')}</div></div>
   </div>
 
   ${buildQuickActions()}
