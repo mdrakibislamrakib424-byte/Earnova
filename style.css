@@ -362,7 +362,7 @@ body.dark .qs-sec-title span{color:#f1f5f9}
 /* MISC */
 .div{height:1px;background:#dbeafe;margin:14px 0}
 .mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
-.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
+.mb0{margin-bottom:0}.mb8{margin-bottom:8px}.mb12{margin-bottom:12px}.mb16{margin-bottom:16px}.mb20{margin-bottom:20px}
 .tc{text-align:center}.mu{color:#64748b}.sm{font-size:12px}.xs{font-size:11px}
 .fw7{font-weight:700}.fw6{font-weight:600}
 .cg{color:#d97706}.cgr{color:#059669}.cr{color:#dc2626}.cp{color:#2563eb}.cb{color:#2563eb}.cy{color:#d97706}
@@ -587,20 +587,39 @@ body.dark .switch .slider{background:#334155}
    HOME PAGE রিডিজাইন — profile+logo+bell হেডার, gradient balance
    card, Quick Actions grid, Recent Activities, Community video
    ══════════════════════════════════════════════════════════ */
-/* HOME TOP GLOW — রেফারেন্স ডিজাইনের মতো স্ক্রিনের উপরের প্রায় অর্ধেক অংশে সবুজ-নীল
-   গ্র্যাডিয়েন্ট ব্যাকগ্রাউন্ড, যার উপর হেডার+ওয়েলকাম টেক্সট+ব্যালেন্স কার্ড বসে; নিচের
-   কার্ডগুলো (Quick Actions ইত্যাদি) আগের হালকা ব্যাকগ্রাউন্ডেই থাকে, কোনো ফিচার সরানো হয়নি */
-.home-top-glow{background:linear-gradient(180deg,#1e3a8a 0%,#0f766e 55%,#059669 100%);margin:0 -15px 14px;padding:14px 15px 22px;border-radius:0 0 28px 28px}
+/* HOME TOP GLOW — শুধু হেডার+ওয়েলকাম+ব্যালেন্স কার্ড পর্যন্ত গ্র্যাডিয়েন্ট (রেফারেন্স ছবির
+   মতো ঠিক ততটুকুই), এর নিচের stat grid/Quick Actions ইত্যাদি স্বাভাবিক হালকা ব্যাকগ্রাউন্ডে —
+   আগে পুরো stat grid পর্যন্ত টানা ছিল, এখন ছোট করে হুবহু রেফারেন্সের মাপে আনা হলো */
+.home-top-glow{background:linear-gradient(180deg,#1e3a8a 0%,#0f766e 55%,#059669 100%);margin:0 -15px 10px;padding:14px 15px 16px;border-radius:0 0 28px 28px}
 .home-top-glow .hh-welcome{color:#fff}
 .home-top-glow .hh-brand span{color:#fff}
 .home-top-glow .hh-av{background:rgba(255,255,255,.2);color:#fff;border:1.5px solid rgba(255,255,255,.4)}
 .home-top-glow .hh-bell{background:rgba(255,255,255,.2);color:#fff}
+.home-top-glow .hero-grad{border:1px solid rgba(255,255,255,.16);box-shadow:0 10px 26px rgba(0,0,0,.22)}
 body.dark .home-top-glow{background:linear-gradient(180deg,#0f172a 0%,#0f766e 55%,#047857 100%)}
+
+/* PROFILE TOP GLOW — home পেজের মতো একই স্টাইলের গ্র্যাডিয়েন্ট, প্রোফাইল হেডার + অ্যাভাটার
+   কার্ড পর্যন্ত, তারপর stats/level ইত্যাদি স্বাভাবিক হালকা ব্যাকগ্রাউন্ডে */
+.profile-top-glow{background:linear-gradient(180deg,#1e3a8a 0%,#0f766e 55%,#059669 100%);margin:0 -15px 14px;padding:14px 15px 18px;border-radius:0 0 28px 28px}
+.profile-top-glow .ph .pt{color:#fff}
+.profile-top-glow .ph .ps{color:rgba(255,255,255,.8)}
+.profile-top-glow .card{background:rgba(255,255,255,.97);border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 26px rgba(0,0,0,.22)}
+body.dark .profile-top-glow{background:linear-gradient(180deg,#0f172a 0%,#0f766e 55%,#047857 100%)}
+body.dark .profile-top-glow .card{background:#1e293b}
+
+/* কার্ড পলিশ — একটু গভীরতা ও নরম বর্ডার, কোনো লেআউট/ফাংশনালিটি বদলায়নি */
+.card{border-radius:18px;box-shadow:0 3px 16px rgba(37,99,235,.08),0 1px 3px rgba(15,23,42,.04)}
+.qa-item{border-radius:14px}
+.qa-ic{box-shadow:0 2px 6px rgba(37,99,235,.10)}
+.qa-item:active .qa-ic{transform:scale(.94)}
 
 /* বটম ন্যাভের কাস্টম আপলোড-করা আইকন — repo-তে icons/nav-*.png না থাকলে/লোড fail করলে
    স্বয়ংক্রিয়ভাবে আগের emoji আইকনে fallback করে, nav bar কখনো ভাঙবে না */
 .bni-img{width:22px;height:22px;object-fit:contain}
 .bni .ic{position:relative}
+
+/* Quick Actions কাস্টম আপলোড-করা আইকন — icons/qa-*.png না থাকলে/fail করলে emoji fallback */
+.qa-ic img{width:24px;height:24px;object-fit:contain}
 
 .hh-top{display:flex;align-items:center;justify-content:space-between;padding:4px 2px 10px}
 .hh-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#2563eb,#059669);color:#fff;border:none;font-size:15px;font-weight:800;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0}
@@ -611,7 +630,7 @@ body.dark .home-top-glow{background:linear-gradient(180deg,#0f172a 0%,#0f766e 55
 .hh-dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:#ef4444;border:1.5px solid #fff}
 .hh-welcome{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:#0f172a;line-height:1.25;margin:2px 2px 14px}
 
-.hero-grad{background:linear-gradient(135deg,#1e3a8a 0%,#059669 100%);border:none;position:relative;overflow:hidden;text-align:center;padding:20px 18px}
+.hero-grad{background:linear-gradient(135deg,#0d1b2e 0%,#1e304d 100%);border:none;position:relative;overflow:hidden;text-align:center;padding:20px 18px}
 .hero-withdraw-btn{width:100%;margin-top:14px;background:rgba(255,255,255,.95);color:#065f46;font-weight:800;border:none;border-radius:12px;padding:12px;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.15)}
 .hero-withdraw-btn:active{transform:translateY(1px)}
 
