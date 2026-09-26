@@ -314,7 +314,10 @@ async function loadPayoutSettings(){
     const aSnap = await fDB.ref('settings/announcement').once('value');
     const aVal = aSnap.val();
     // settings row returns {id:'announcement', data:'text'} — .data extract করো
-    ann = (aVal && typeof aVal==='object') ? (aVal.data||'') : (aVal||'');
+    let rawAnn = (aVal && typeof aVal==='object') ? (aVal.data||'') : (aVal||'');
+    // ⚠️ FIX: DB-তে পুরনো/ভুল shape-এ (object হিসেবে) সেভ হয়ে থাকলেও যাতে
+    // "[object Object]" কখনো ব্যানারে না যায় — string না হলে খালি করে দাও
+    ann = (typeof rawAnn==='string') ? rawAnn : '';
     EZCache.set('settings_announcement', ann);
   }
   if(ann) S.siteSettings={...(S.siteSettings||{}), announcement:ann};
