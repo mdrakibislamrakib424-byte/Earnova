@@ -29,20 +29,14 @@ async function initOfferwallPage(){
   const grid = document.getElementById('wallCardsGrid');
   if(!grid) return; // কোনো wall configured না থাকলে grid থাকবে না
 
-  // ── পুরো Wall ট্যাবের জন্য একবারই unlock check — DB call মোটে ১টা ──
-  const unlockSt = await checkWallUnlock('offerwall');
-
-  // সব কার্ডের status একইসাথে আপডেট করো (per-card আলাদা DB call নেই)
+  // ⚠️ ads-দেখে unlock করার সিস্টেম বন্ধ — সব wall এখন সবসময় unlocked দেখাবে,
+  // তাই আর DB call করে unlock status চেক করার দরকার নেই
   $$('.ofc').forEach(card=>{
     const wid = card.dataset.gotoWall;
     const statusEl = document.getElementById('wc-status-'+wid);
     if(!statusEl) return;
-    if(unlockSt.locked){
-      statusEl.innerHTML = '🔒 '+T('lockedWord');
-    }else{
-      statusEl.innerHTML = '✅ '+T('unlockedWord');
-      statusEl.style.background = 'rgba(16,185,129,.35)';
-    }
+    statusEl.innerHTML = '✅ '+T('unlockedWord');
+    statusEl.style.background = 'rgba(16,185,129,.35)';
   });
   // কার্ডে ক্লিক হ্যান্ডলিং global [data-goto-wall] হ্যান্ডলার (openWall()) নিজেই করে —
   // এখানে আলাদা করে বসানোর দরকার নেই (double-click bug এড়াতে)
