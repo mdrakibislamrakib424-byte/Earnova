@@ -50,14 +50,16 @@ function buildReferralPage(){
 function buildProfile(){
   const ud=S.userData||{};
   const daysSince = ud.createdAt ? Math.max(0,Math.floor((Date.now()-new Date(ud.createdAt).getTime())/(86400000))) : 0;
-  return `<div class="ph"><div class="pt">👤 ${T('pr')}</div><div class="ps">${T('ms')} ${fmtD(ud.createdAt)}</div></div>
+  return `<div class="profile-top-glow">
+  <div class="ph"><div class="pt">👤 ${T('pr')}</div><div class="ps">${T('ms')} ${fmtD(ud.createdAt)}</div></div>
 
   <!-- Avatar & Basic Info -->
-  <div class="card mb12" style="text-align:center">
+  <div class="card mb0" style="text-align:center">
     <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#2563eb);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;margin:0 auto 12px;box-shadow:0 0 30px rgba(124,58,237,.3)">${escapeHtml((ud.name||ud.email||'?')[0].toUpperCase())}</div>
     <div style="font-weight:700;font-size:16px;color:#0f172a">${escapeHtml(ud.name)||'—'}</div>
     <div style="font-size:13px;color:#64748b;margin-bottom:4px">${escapeHtml(ud.email)||'—'}</div>
     ${ud.isAdmin?`<span class="bdg bdp">⚙️ ${T('profAdminBadge')}</span>`:''}
+  </div>
   </div>
 
   <!-- Stats -->
