@@ -69,6 +69,25 @@ async function main(){
     }
   }
 
+  // ── icons/ ফোল্ডার (bottom nav + quick actions কাস্টম আইকন) পুরোপুরি কপি ──
+  // আগে এই ফোল্ডারটা মিস হয়ে যেত কারণ উপরের কপি-তালিকা আর ছবি-লুপ দুটোই শুধু
+  // ROOT-এ সরাসরি থাকা ফাইল দেখত, সাবফোল্ডারের ভেতরে ঢুকত না।
+  const iconsSrc = path.join(ROOT, 'icons');
+  const iconsDest = path.join(WWW, 'icons');
+  if (fs.existsSync(iconsSrc)) {
+    if (!fs.existsSync(iconsDest)) fs.mkdirSync(iconsDest, { recursive: true });
+    for (const f of fs.readdirSync(iconsSrc)) {
+      const srcPath = path.join(iconsSrc, f);
+      if (fs.statSync(srcPath).isFile()) {
+        fs.copyFileSync(srcPath, path.join(iconsDest, f));
+        console.log(`   icons/${f}  www/icons/${f}`);
+        built++;
+      }
+    }
+  } else {
+    console.log('  ℹ️ icons/ ফোল্ডার পাওয়া যায়নি — কাস্টম nav/quick-action আইকন থাকলে সেগুলো এখনো emoji fallback দেখাবে।');
+  }
+
   // ── js/ ফোল্ডারের সব .js ফাইল minify করে কপি করা (terser থাকলে) ──
   let terser = null;
   try { terser = require('terser'); }
