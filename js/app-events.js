@@ -238,15 +238,11 @@ async function navTo(page){
 }
 
 async function openWall(wallId){
-  // ── পুরো Wall ট্যাব একসাথে unlock হয় (আলাদা আলাদা wall না) ──
-  S.unlockWallId='offerwall';
-  const st=await checkWallUnlock('offerwall');
-  if(st.locked){
-    S.page='unlock';
-  } else {
-    S.activeWallId=wallId;
-    S.page='wallframe';
-  }
+  // ⚠️ ads-দেখে unlock করার সিস্টেম ডেভেলপারের অনুরোধে বন্ধ করা হলো — এখন সবসময়
+  // সরাসরি wallframe খুলবে, unlock পেজে পাঠানো হবে না। unlock পেজের কোড এখনো
+  // প্রজেক্টে আছে (মুছে ফেলা হয়নি), শুধু এই পথ থেকে আর ব্যবহার হচ্ছে না।
+  S.activeWallId=wallId;
+  S.page='wallframe';
   render();
 }
 
