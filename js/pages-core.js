@@ -534,7 +534,11 @@ function renderApp(){
 function buildNav(){
   const ud=S.userData||{};
   const hasNotice=S.noticeQueue.length>0;
-  const announcement = S.siteSettings?.announcement||'';
+  // ⚠️ FIX: পুরনো/ভাঙা ডেটার কারণে announcement মাঝেমধ্যে string না হয়ে object হয়ে
+  // আসতে পারে (DB-তে কখনো ভুলভাবে সেভ হয়ে থাকলে) — তখন ${announcement} সরাসরি বসালে
+  // "[object Object]" দেখাত। এখন শুধু আসল string থাকলেই ব্যানার দেখাবে, নাহলে চুপচাপ hide।
+  const rawAnnouncement = S.siteSettings?.announcement;
+  const announcement = (typeof rawAnnouncement==='string') ? rawAnnouncement.trim() : '';
   const onlineCount = S.realUserCount || '…';
   const icoSun='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
   const icoMoon='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
@@ -750,11 +754,12 @@ async function updateWallCardStatuses(){
 // ══════════════════════════════════════════════════════════
 function buildHomeHeader(){
   const ud=S.userData||{};
-  const initial=escapeHtml((ud.name||ud.email||'?')[0].toUpperCase());
   const hasNotice=S.noticeQueue.length>0;
-  return `<div class="hh-top">
-    <button class="hh-av" id="hhAv">${initial}</button>
-    <div class="hh-brand"><img src="icon.png" alt="" onerror="this.style.display='none'"><span>${T('appName')}</span></div>
+  // ⚠️ ডুপ্লিকেট হেডার ফিক্স: উপরের গ্লোবাল top bar (buildNav)-এ আগে থেকেই
+  // hamburger + লোগো + avatar আছে, তাই এখানে সেগুলো আর দেখানো হচ্ছে না —
+  // শুধু 🔔 বেল আইকন রাখা হলো (এটাই একমাত্র জিনিস যেটা উপরের bar-এ নেই,
+  // Notices পেজে যাওয়ার এই রাস্তাটা যাতে হারিয়ে না যায়)
+  return `<div class="hh-top hh-top-min">
     <button class="hh-bell${hasNotice?' has-dot':''}" id="hhBell">${NAV_ICONS.bell}${hasNotice?'<span class="hh-dot"></span>':''}</button>
   </div>
   <div class="hh-welcome">${T('welcomeToWord')} ${T('appName')}, ${escapeHtml(ud.name||ud.email?.split('@')[0]||'User')}!</div>`;
@@ -819,12 +824,15 @@ function buildHome(){
   const todayEarn=ud.todayDate===today?(ud.todayEarned||0):0;
   return `<div class="home-top-glow">
   ${buildHomeHeader()}
-  <div class="hero hero-grad">
-    <div style="font-size:11px;color:rgba(255,255,255,.75);font-weight:600;margin-bottom:4px;text-transform:uppercase;letter-spacing:.09em">${T('yourEarningsLabel')}</div>
-    <div class="sf" style="font-size:36px;font-weight:800;color:#fff" id="liveHeroBal">${fmt$(ud.usdEarned||0)}</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:4px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
-    <button class="btn hero-withdraw-btn" data-page="wallet">💸 ${T('withdrawWord')}</button>
   </div>
+  <div class="hero hero-grad">
+    <div style="font-size:11px;color:rgba(255,255,255,.75);font-weight:600;text-transform:uppercase;letter-spacing:.09em">${T('yourEarningsLabel')}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px">
+      <div class="sf" style="font-size:34px;font-weight:800;color:#fff" id="liveHeroBal">${fmt$(ud.usdEarned||0)}</div>
+      <div class="hero-coin">$</div>
+    </div>
+    <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
+    <button class="btn hero-withdraw-btn" data-page="wallet">${T('withdrawWord')} <span class="hwb-chev">›</span></button>
   </div>
 
   <div class="sgd">
