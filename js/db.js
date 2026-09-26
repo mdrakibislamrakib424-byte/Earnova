@@ -84,15 +84,12 @@ async function getWallData(){
 }
 
 async function checkWallUnlock(wallId){
-  if(!S.user) return {locked:true, count:0};
-  // wallProgress stored as JSON field in users table
-  const snap=await fDB.ref(`users/${S.user.uid}`).once('value');
-  const ud=snap.val()||{};
-  const wallProgress=ud.wallProgress||{};
-  const prog=wallProgress[wallId]||{count:0,unlockedAt:0};
-  const unlocked=prog.unlockedAt && (Date.now()-prog.unlockedAt)<CFG.unlock24h;
-  const remaining=unlocked?Math.max(0,CFG.unlock24h-(Date.now()-prog.unlockedAt)):0;
-  return {locked:!unlocked, count:prog.count||0, unlockedAt:prog.unlockedAt, remaining};
+  // ⚠️ ads-দেখে unlock করার সিস্টেম ডেভেলপারের অনুরোধে পুরোপুরি বন্ধ — এই ফাংশনটাই
+  // পুরো অ্যাপের সব wall/offer lock-check-এর মূল উৎস, তাই এখানে একবার বদলালেই
+  // সব জায়গায় (offerwall, alloffers, wall badge ইত্যাদি) সবসময় unlocked দেখাবে।
+  // পুরনো লজিক (wallProgress/ads গোনা) কোডে রয়ে গেছে ব্যবহার হচ্ছে না এমন জায়গায়,
+  // এই ফাংশনটাই এখন থেকে সবসময় unlocked রিটার্ন করে।
+  return {locked:false, count:0, unlockedAt:Date.now(), remaining:0};
 }
 
 function msToHM(ms){
