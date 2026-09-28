@@ -405,7 +405,7 @@ const CFG = {
   wallSubidParam:{
     w1:'subid',  w2:'subid',  w3:'subid',  w4:'subid',  w5:'subid',
     w6:'subid',  w7:'subid',  w8:'subid',  w9:'subid',  w10:'subid',
-    w11:'subid', w12:'subid', w13:'subid', w14:'subid', w15:'subid',
+    w11:'subid', w12:'userId', w13:'subid', w14:'subid', w15:'subid',
     w16:'subid', w17:'subid', w18:'subid', w19:'subid', w20:'subid',
   },
   socialLogo:{
@@ -447,9 +447,9 @@ const CFG = {
   ],
   // ── এখানে প্রতিটা wall এর iframe লিংক বসান — খালি রাখলে সেই কার্ড দেখাবে না ──
   wallLinks:{
-    w1:'https://www.cdnflyer.com/wall/ve9REAQP',  w2:'',  w3:'',  w4:'',  w5:'',
+    w1:'',  w2:'',  w3:'',  w4:'',  w5:'',
     w6:'',  w7:'',  w8:'',  w9:'',  w10:'',
-    w11:'', w12:'', w13:'', w14:'', w15:'',
+    w11:'', w12:'https://earn.wannads.com/wall?apiKey=6ab98011d2882365815928', w13:'', w14:'', w15:'',
     w16:'', w17:'', w18:'', w19:'', w20:'',
   },
 };
