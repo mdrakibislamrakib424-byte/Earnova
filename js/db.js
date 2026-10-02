@@ -1243,6 +1243,18 @@ function updateNavBar(){
   // Home hero balance
   const heroBalEl = document.getElementById('liveHeroBal');
   if(heroBalEl && S.userData) heroBalEl.textContent = fmt$(S.userData.usdEarned||0);
+  // Home hero card: Completed Offers / Active Referrals / Today Earned
+  if(S.userData){
+    const hoEl = document.getElementById('liveHeroOffers');
+    if(hoEl) hoEl.textContent = S.userData.offersCompleted||0;
+    const hrEl = document.getElementById('liveHeroRefs');
+    if(hrEl) hrEl.textContent = S.userData.activeReferrals||0;
+    const htEl = document.getElementById('liveHeroToday');
+    if(htEl){
+      const _t = new Date().toDateString();
+      htEl.textContent = fmt$((S.userData.todayDate===_t) ? (S.userData.todayEarned||0) : 0);
+    }
+  }
 }
 
 async function checkActiveReferrals(){
