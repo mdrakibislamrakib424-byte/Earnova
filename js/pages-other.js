@@ -82,7 +82,7 @@ function buildProfile(){
     </div>
   </div>
 
-  <!-- Level & Badges -->
+  <!-- Level & Streak -->
   <div class="card mb12">
     <div class="card-hd">${getUserLevel(ud.usdEarned).icon} ${T('profLevelPrefix')} <span class="${getUserLevel(ud.usdEarned).cls}">${getUserLevel(ud.usdEarned).name}</span></div>
     ${getUserLevel(ud.usdEarned).next?`
@@ -92,8 +92,6 @@ function buildProfile(){
     <div class="lvl-bar-wrap"><div class="lvl-bar" style="width:${Math.min(getUserLevel(ud.usdEarned).progress,100)}%"></div></div>`
     :`<div style="text-align:center;font-size:13px;color:#7c3aed;font-weight:700">${T('profMaxLevel')}</div>`}
     <div class="div mt12 mb12"></div>
-    <div class="card-hd">🎖️ ${T('profBadges')}</div>
-    ${buildBadgesSection(ud)}
     <div class="card-hd mt12">🔥 ${T('profLoginStreak')}</div>
     ${buildStreakUI(ud)}
   </div>
