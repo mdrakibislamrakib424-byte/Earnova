@@ -22,24 +22,6 @@ function getUserLevel(totalEarned){
   return      {name:'Bronze',icon:'🥉',color:'#b45309',next:10,progress:Math.round(e*10),cls:'lv-bronze'};
 }
 
-// ── BADGES ─────────────────────────────────────────────
-function getUserBadges(ud){
-  const earned=parseFloat(ud.usdEarned||0);
-  const ads=parseInt(ud.adsWatched||0);
-  const refs=parseInt(ud.activeReferrals||0);
-  const offers=parseInt(ud.offersCompleted||0);
-  return [
-    {icon:'🌟',name:'First Earn',earned:earned>=0.01,color:'#f59e0b'},
-    {icon:'📺',name:'Ad Watcher',earned:ads>=10,color:'#2563eb'},
-    {icon:'👥',name:'Connector',earned:refs>=1,color:'#8b5cf6'},
-    {icon:'🎯',name:'Offer Pro',earned:offers>=5,color:'#ef4444'},
-    {icon:'💰',name:'$1 Club',earned:earned>=1,color:'#10b981'},
-    {icon:'🔥',name:'$10 Club',earned:earned>=10,color:'#ec4899'},
-    {icon:'👑',name:'$50 Club',earned:earned>=50,color:'#f59e0b'},
-    {icon:'💎',name:'Diamond',earned:earned>=100,color:'#2563eb'},
-  ];
-}
-
 // ── STREAK SYSTEM ──────────────────────────────────────
 function getStreakData(ud){
   const today=new Date().toDateString();
@@ -73,6 +55,28 @@ async function updateLoginStreak(uid, ud){
   }
 }
 
+// ── আজকের আয় (today_earned) আপডেট — Daily Bonus ও Spin এর জন্য ──
+// admin.js এর approveSubmission এর মতোই একই নিয়ম: একই দিন হলে atomic
+// increment, নতুন দিন হলে today_earned রিসেট করে নতুন মান + today_date বসানো।
+async function addTodayEarned(uid, amount){
+  try{
+    const amt = parseFloat(amount)||0;
+    if(!uid || amt<=0) return;
+    const today = new Date().toDateString();
+    const {data:row} = await sb.from('users').select('today_date').eq('id',uid).maybeSingle();
+    if((row?.today_date||'') === today){
+      await atomicIncrement(uid,'todayEarned',amt); // DB + লোকাল S.userData দুটোই
+    } else {
+      await sb.from('users').update({ today_earned: amt, today_date: today }).eq('id',uid);
+      if(S.userData && S.user?.uid===uid){
+        S.userData.todayEarned = amt;
+        S.userData.todayDate = today;
+      }
+      EZCache.invalidate(`users/${uid}`);
+    }
+  }catch(e){ /* silent — মূল balance আগেই ক্রেডিট হয়ে গেছে */ }
+}
+
 // ── DAILY LOGIN BONUS ──────────────────────────────────
 async function checkDailyBonus(uid, ud){
   const today=new Date().toDateString();
@@ -96,6 +100,7 @@ async function checkDailyBonus(uid, ud){
       await atomicIncrement(uid,'usdEarned',bonus);
     }
   }catch(e){ return; }
+  await addTodayEarned(uid, bonus);
   if(S.userData) S.userData.dailyBonusDate = today;
   toast(`🎁 Daily Login Bonus: +$${bonus.toFixed(2)}!`,'s',3500);
   sendLocalNotif('🎁 Daily Bonus!',`You earned $${bonus.toFixed(2)} for logging in today!`);
@@ -224,6 +229,7 @@ async function doSpin(){
   setTimeout(async ()=>{
     try{
       await atomicIncrement(S.user.uid, 'usdEarned', prize.amount);
+      await addTodayEarned(S.user.uid, prize.amount);
       // lastSpinDate ইতিমধ্যে atomic_claim_spin দিয়ে সেট হয়ে গেছে উপরেই —
       // এখানে শুধু লোকাল S.userData ক্যাশ আপডেট করা হচ্ছে
       if(S.userData) S.userData.lastSpinDate = today;
@@ -419,23 +425,6 @@ function buildLeaderboardPage(){
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;font-size:12px;color:#64748b;text-align:center;margin-bottom:14px">
     ${T('lbPrivacyNote')}
   </div>`;
-}
-
-// ── BADGES PAGE ────────────────────────────────────────
-function buildBadgesSection(ud){
-  const badges=getUserBadges(ud);
-  return `<div class="badge-grid">${badges.map(b=>{
-    const gm = WALL_GRADIENTS[b.color] || WALL_GRADIENTS['#2563eb'];
-    const style = b.earned
-      ? `background:${gm.grad};border-color:transparent;box-shadow:0 4px 14px ${gm.shadow}`
-      : `background:${gm.grad};border-color:transparent;opacity:.42;filter:grayscale(35%)`;
-    return `
-    <div class="badge-item${b.earned?' earned':''}" style="${style}">
-      <div class="bi">${b.icon}</div>
-      <div class="bn" style="color:#fff">${b.name}</div>
-      ${b.earned?'<div style="font-size:8px;color:rgba(255,255,255,.9);margin-top:2px;font-weight:700">✓</div>':'<div style="font-size:8px;color:rgba(255,255,255,.9);margin-top:2px">🔒</div>'}
-    </div>`;
-  }).join('')}</div>`;
 }
 
 // ── STREAK UI ──────────────────────────────────────────
