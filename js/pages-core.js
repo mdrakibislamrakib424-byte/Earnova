@@ -832,24 +832,29 @@ function buildHome(){
       <div class="hero-coin">$</div>
     </div>
     <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+      <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 4px;text-align:center">
+        <div style="font-size:16px;line-height:1">✅</div>
+        <div class="sf" id="liveHeroOffers" style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;line-height:1.1">${ud.offersCompleted||0}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;line-height:1.2">${T('oc')}</div>
+      </div>
+      <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 4px;text-align:center">
+        <div style="font-size:16px;line-height:1">👥</div>
+        <div class="sf" id="liveHeroRefs" style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;line-height:1.1">${ud.activeReferrals||0}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;line-height:1.2">${T('refCount')}</div>
+      </div>
+      <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 4px;text-align:center">
+        <div style="font-size:16px;line-height:1">💵</div>
+        <div class="sf" id="liveHeroToday" style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;line-height:1.1">${fmt$(todayEarn)}</div>
+        <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;line-height:1.2">${T('todayEarn')}</div>
+      </div>
+    </div>
     <button class="btn hero-withdraw-btn" data-page="wallet">${T('withdrawWord')} <span class="hwb-chev">›</span></button>
-  </div>
-
-  <div class="sgd">
-    <div class="sc sc-2"><div class="sc-i">✅</div><div class="sc-v">${ud.offersCompleted||0}</div><div class="sc-l">${T('oc')}</div></div>
-    <div class="sc sc-3"><div class="sc-i">👥</div><div class="sc-v">${ud.activeReferrals||0}</div><div class="sc-l">${T('refCount')}</div></div>
-    <div class="sc sc-4"><div class="sc-i">💵</div><div class="sc-v">${fmt$(todayEarn)}</div><div class="sc-l">${T('todayEarn')}</div></div>
   </div>
 
   ${buildQuickActions()}
   ${buildRecentActivities()}
   ${buildCommunityNews()}
-
-  <!-- TOTAL PAID OUT — বিশ্বাসযোগ্যতা বাড়ানোর জন্য, App যে আসল টাকা দেয় সেটা দেখানো -->
-  <div id="totalPaidOutBox" class="card mb12" style="text-align:center;background:linear-gradient(135deg,rgba(5,150,105,.06),rgba(37,99,235,.06));border:1.5px solid #bbf7d0">
-    <div style="font-size:11px;color:#059669;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">💚 Total Paid to Users</div>
-    <div class="sf" style="font-size:26px;font-weight:800;color:#059669" id="totalPaidOutAmt">…</div>
-  </div>
 
   <!-- LIVE PAYOUT TICKER — সাম্প্রতিক approved withdrawal (মাস্কড নাম) স্ক্রল করে দেখায় -->
   <div id="payoutTicker" style="display:none;background:#fff;border:1.5px solid #e0eaff;border-radius:12px;padding:8px 12px;margin-bottom:12px;overflow:hidden;white-space:nowrap;font-size:12px;color:#334155"></div>
@@ -895,15 +900,6 @@ function buildHome(){
       <button onclick="S.page='leaderboard';render()" style="background:none;border:none;cursor:pointer;font-size:12px;color:#2563eb;font-weight:700">${T('seeAllBtn')}</button>
     </div>
     <div id="lbPreview">${buildHomeLeaderboardPreview()}</div>
-  </div>
-
-  <!-- BADGES PREVIEW -->
-  <div class="card mb12">
-    <div class="card-hd" style="display:flex;align-items:center;justify-content:space-between">
-      <span>${T('yourBadgesTitle')}</span>
-      <span style="font-size:11px;color:#64748b">${getUserBadges(ud).filter(b=>b.earned).length}/${getUserBadges(ud).length} ${T('earnedWord')}</span>
-    </div>
-    ${buildBadgesSection(ud)}
   </div>
 
   <!-- OFFERS PREVIEW on Dashboard -->
