@@ -657,3 +657,139 @@ body.dark .profile-avatar-card{background:#1e293b}
 .bnav-scroll .bni .ic{font-size:23px}
 .bnav-scroll .bni .ic svg{width:23px;height:23px}
 .bnav-scroll .bni .lb{font-size:10.5px;margin-top:2px}
+
+
+/* ══════════════════════════════════════════════════════════════
+   🎨 THEME v2 — রেফারেন্স ছবির রঙ: নীল→টিল-সবুজ হেডার, নেভি glossy balance
+   card, সিলভার Withdraw, সোনালি accent, আর halka-ivory (ভাসা ভাসা) কার্ড।
+   নিচের সব rule আগের rule এর পরে আছে, তাই শুধু রঙ/শ্যাডো বদলায় —
+   লেআউট বা কোনো ফাংশন বদলায় না। Dark mode আগের rule গুলোই সামলায়।
+   ══════════════════════════════════════════════════════════════ */
+
+/* ১) কার্ড: pure সাদা নয়, হলুদও নয় — খুব সামান্য warm ivory, নরম নিউট্রাল বর্ডার */
+.card,.stc,.wc,.uof-card,.qs-card,.arow,.lb-row{
+  background:linear-gradient(180deg,#fcfaf5 0%,#f9f7f1 100%);
+  border-color:#e7e5dd;
+  box-shadow:0 3px 14px rgba(15,40,70,.07),0 1px 2px rgba(15,23,42,.04);
+}
+.stc-upload{background:#f6f4ee;border-color:#d6d3c9}
+.qa-ic{background:linear-gradient(135deg,#f3f7fb,#f2f8f5);border-color:#dde6ee}
+.ra-item{border-bottom-color:#ece9e1}
+
+/* ২) সব ভেতরের পেজের হেডার (Social, Wallet, Offers…) এ হোমের মতো একই নীল→টিল গ্র্যাডিয়েন্ট */
+#pgContent > .ph:first-child{
+  background:linear-gradient(135deg,#0a3d82 0%,#0f8f8a 55%,#12b98a 100%);
+  margin:0 -15px 14px;padding:16px 15px 24px;border-radius:0 0 26px 26px;
+  box-shadow:0 8px 22px rgba(10,61,130,.18);
+}
+#pgContent > .ph:first-child .pt{color:#fff}
+#pgContent > .ph:first-child .ps{color:rgba(255,255,255,.85)}
+#pgContent > .ph:first-child .bh{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.38);color:#fff}
+body.dark #pgContent > .ph:first-child{background:linear-gradient(135deg,#08284f 0%,#0a6e6a 55%,#0d9467 100%)}
+body.dark #pgContent > .ph:first-child .pt{color:#fff}
+body.dark #pgContent > .ph:first-child .ps{color:rgba(255,255,255,.8)}
+
+/* ৩) Balance card: গভীর নেভি + glossy shine + সোনালি glow */
+.hero-grad{
+  background:linear-gradient(135deg,#0b1730 0%,#15294b 55%,#0d1b2e 100%);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 14px 30px rgba(6,16,36,.38),inset 0 1px 0 rgba(255,255,255,.14);
+}
+.hero-grad::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,rgba(255,255,255,.15) 0%,rgba(255,255,255,.05) 30%,rgba(255,255,255,0) 31%)}
+.hero-grad::after{content:'';position:absolute;right:-46px;top:-64px;width:190px;height:190px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle,rgba(245,185,66,.24) 0%,rgba(245,185,66,0) 70%)}
+.hero-grad > *{position:relative;z-index:1}
+.hero-withdraw-btn{
+  background:linear-gradient(180deg,#fbfcfd 0%,#d3dae1 48%,#aab5bf 100%);
+  box-shadow:0 3px 10px rgba(0,0,0,.30),inset 0 1px 0 rgba(255,255,255,.9);
+  letter-spacing:.01em;
+}
+
+/* ══════════ SOCIAL TASKS — list ══════════ */
+.tk-searchbox{position:relative;margin-bottom:10px}
+.tk-searchic{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;opacity:.55;pointer-events:none}
+.tk-search{width:100%;padding:12px 14px 12px 38px;border:1.5px solid #e1ded5;border-radius:13px;background:#fcfaf5;font-size:14px;color:#0f172a;outline:none;font-family:'DM Sans',sans-serif;box-shadow:0 2px 8px rgba(15,40,70,.05)}
+.tk-search:focus{border-color:#0f8f8a;box-shadow:0 0 0 3px rgba(15,143,138,.14)}
+.tk-chips{display:flex;gap:7px;overflow-x:auto;padding:2px 1px 10px;scrollbar-width:none}
+.tk-chips::-webkit-scrollbar{display:none}
+.tk-chips:empty{display:none}
+.tk-chip{flex:0 0 auto;border:1.5px solid #e1ded5;background:#fcfaf5;color:#475569;border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif}
+.tk-chip.on{background:linear-gradient(135deg,#0a3d82,#0f8f8a);border-color:transparent;color:#fff;box-shadow:0 3px 10px rgba(10,61,130,.25)}
+
+.tk-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;
+  background:linear-gradient(180deg,#fcfaf5 0%,#f9f7f1 100%);border:1.5px solid #e7e5dd;border-radius:15px;
+  padding:11px 12px;margin-bottom:9px;cursor:pointer;box-shadow:0 3px 12px rgba(15,40,70,.07);transition:transform .15s}
+.tk-row:active{transform:scale(.985)}
+.tk-row.tk-locked{cursor:default}
+.tk-row.tk-locked:active{transform:none}
+.tk-ic{width:44px;height:44px;border-radius:12px;background:#eef3f8;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+.tk-mid{min-width:0}
+.tk-title{font-size:13px;font-weight:700;color:#0f172a;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tk-meta{display:flex;align-items:center;gap:7px;margin-top:4px}
+.tk-tag{background:#e6f1f5;color:#0a5a78;border-radius:6px;padding:1px 7px;font-size:10px;font-weight:700}
+.tk-need{font-size:10.5px;color:#64748b;font-weight:600;white-space:pre}
+.tk-prog{display:flex;align-items:center;gap:7px;margin-top:6px;font-size:10.5px;color:#64748b;font-weight:600}
+.tk-bar{flex:1;height:5px;border-radius:5px;background:#e3e8ee;overflow:hidden}
+.tk-bar i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#0f8f8a,#12b98a)}
+.tk-side{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.tk-reward{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#8a5a00;background:linear-gradient(180deg,#fff3cf,#f7dd8f);border:1px solid #ecd07a;border-radius:8px;padding:2px 8px}
+.tk-btn{display:inline-block;border-radius:10px;padding:7px 16px;font-size:12px;font-weight:800;color:#fff;min-width:64px;text-align:center}
+.tk-do{background:linear-gradient(135deg,#0a3d82,#0f8f8a);box-shadow:0 3px 10px rgba(10,61,130,.28)}
+.tk-redo{background:linear-gradient(135deg,#d9480f,#e8590c);box-shadow:0 3px 10px rgba(217,72,15,.28)}
+.tk-pill{display:inline-block;border-radius:10px;padding:6px 10px;font-size:11px;font-weight:800;white-space:nowrap}
+.tk-pill-ok{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}
+.tk-pill-wait{background:#fef3c7;color:#92400e;border:1px solid #fde68a}
+.tk-pill-full{background:#e5e7eb;color:#4b5563;border:1px solid #d1d5db}
+
+/* ══════════ SOCIAL TASKS — detail ══════════ */
+.tk-hero{background:linear-gradient(135deg,#0b1730 0%,#15294b 55%,#0d1b2e 100%);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:16px;margin-bottom:12px;position:relative;overflow:hidden;box-shadow:0 12px 26px rgba(6,16,36,.34),inset 0 1px 0 rgba(255,255,255,.14)}
+.tk-hero::before{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.04) 30%,rgba(255,255,255,0) 31%)}
+.tk-hero > *{position:relative}
+.tk-hero-top{display:flex;align-items:center;gap:11px}
+.tk-hero-ic{width:48px;height:48px;border-radius:13px;background:rgba(255,255,255,.92);display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0}
+.tk-hero-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;line-height:1.3}
+.tk-hero-tags{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+.tk-hero-tags span{background:rgba(255,255,255,.16);color:#e8f1ff;border-radius:6px;padding:1px 8px;font-size:10px;font-weight:700}
+.tk-hero-rw{text-align:center;background:linear-gradient(180deg,#ffe9a8,#f5b942);border-radius:12px;padding:6px 11px;flex-shrink:0;box-shadow:0 3px 10px rgba(0,0,0,.3)}
+.tk-hero-rw small{display:block;font-size:9px;font-weight:800;color:#7a4a06;text-transform:uppercase;letter-spacing:.03em}
+.tk-hero-rw b{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#5c3500}
+.tk-hero-prog{display:flex;align-items:center;gap:9px;margin-top:13px;font-size:11px;color:rgba(255,255,255,.8);font-weight:600}
+.tk-bar-dk{background:rgba(255,255,255,.18)}
+.tk-rules{font-size:13px;color:#334155;line-height:1.75;white-space:pre-wrap;word-break:break-word;margin-bottom:14px}
+.tk-open{background:linear-gradient(135deg,#0a3d82,#0f8f8a);color:#fff;font-weight:800;box-shadow:0 4px 14px rgba(10,61,130,.28)}
+.tk-step{margin-bottom:14px}
+.tk-step-hd{display:flex;align-items:flex-start;gap:9px;margin-bottom:8px}
+.tk-num{min-width:24px;height:24px;border-radius:8px;background:linear-gradient(135deg,#0a3d82,#0f8f8a);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tk-step-lb{font-size:13px;font-weight:700;color:#0f172a;line-height:1.4;padding-top:2px}
+.tk-req{color:#dc2626;margin-left:2px}
+.tk-opt{font-style:normal;font-size:11px;color:#94a3b8;font-weight:600}
+.tk-drop{border:2px dashed #cfd3d8;border-radius:13px;background:#f5f3ed;text-align:center;padding:16px 12px;cursor:pointer;transition:all .18s}
+.tk-drop:active{background:#eceae2}
+.tk-drop.has{border-style:solid;border-color:#12b98a;background:#f1f8f4}
+.tk-drop-ic{font-size:30px;line-height:1}
+.tk-drop-t{font-size:13px;font-weight:700;color:#334155;margin-top:6px}
+.tk-drop-s{font-size:11px;color:#94a3b8;margin-top:3px}
+.tk-prev-img{max-width:100%;max-height:170px;border-radius:9px;object-fit:contain}
+.tk-prev-row{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;font-size:11px;font-weight:600;color:#047857}
+.tk-prev-x{border:none;background:#fee2e2;color:#dc2626;border-radius:7px;width:24px;height:24px;font-weight:800;cursor:pointer}
+.tk-inp{width:100%;padding:11px 13px;border:1.5px solid #dcd9d0;border-radius:11px;background:#fcfaf5;font-size:13px;color:#0f172a;outline:none;resize:vertical;font-family:'DM Sans',sans-serif;line-height:1.5}
+.tk-inp:focus{border-color:#0f8f8a;box-shadow:0 0 0 3px rgba(15,143,138,.14)}
+.stc-submit-on{background:linear-gradient(135deg,#0a3d82,#0f8f8a)}
+
+/* ── Dark mode ── */
+body.dark .tk-search,body.dark .tk-chip{background:#1e293b;border-color:#334155;color:#e2e8f0}
+body.dark .tk-chip.on{background:linear-gradient(135deg,#0a3d82,#0f8f8a);color:#fff;border-color:transparent}
+body.dark .tk-row{background:#1e293b;border-color:#334155}
+body.dark .tk-ic{background:#0f172a}
+body.dark .tk-title,body.dark .tk-step-lb{color:#f1f5f9}
+body.dark .tk-tag{background:rgba(15,143,138,.2);color:#7dd3d0}
+body.dark .tk-need,body.dark .tk-prog{color:#94a3b8}
+body.dark .tk-bar{background:#334155}
+body.dark .tk-rules{color:#cbd5e1}
+body.dark .tk-drop{background:#0f172a;border-color:#334155}
+body.dark .tk-drop-t{color:#e2e8f0}
+body.dark .tk-drop.has{background:rgba(18,185,138,.1)}
+body.dark .tk-inp{background:#0f172a;border-color:#334155;color:#e2e8f0}
+body.dark .stc-upload{background:#0f172a;border-color:#334155}
+body.dark .qa-ic{background:#0f172a;border-color:#334155}
