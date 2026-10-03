@@ -8,6 +8,7 @@
 // এখানে আবার কল হলেও কোনো সমস্যা নেই (দ্বিতীয়বার চুপচাপ স্কিপ হয়ে যাবে)।
 let _lastRenderedPageForAd = null;
 function render(){
+  if(S.page !== 'social') S.socialView = null; // Social Task detail শুধু social পেজেই থাকে
   if(S.page !== _lastRenderedPageForAd){
     _lastRenderedPageForAd = S.page;
     maybeShowPageEntryAd(S.page); // fire-and-forget — render() ব্লক করবে না
