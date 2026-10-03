@@ -23,6 +23,12 @@ const S = {
 // ─── LANGUAGES ────────────────────────────────────────
 const LANGS={
   en:{n:'English',f:'🇺🇸',d:'ltr',t:{
+    tkDetailTitle:'Task Details',tkSearchPh:'Search tasks...',tkAll:'All',tkNoMatch:'No matching tasks found.',
+    tkDo:'Do',tkRedo:'Redo',tkPending:'Pending',tkApproved:'Approved',tkFull:'Full',
+    tkRules:'Task Rules',tkSubmitProof:'Submit Proof',tkFillAll:'Complete all required steps',
+    tkScreenshot:'Screenshot',tkTextProof:'Link / Text',tkOptional:'(optional)',tkTextPh:'Paste the link or write here...',
+    tkImageOnly:'Please choose an image file.',tkTaskChanged:'This task was updated. Please open it again.',
+    tkNeedSql:'Could not save proof. Please contact support.',
     appName:'EARNOVA',appTag:'Earn real money worldwide',
     li:'Sign In',reg:'Create Account',lo:'Sign Out',
     em:'Email',pw:'Password',nm:'Full Name',cpw:'Confirm Password',rc:'Referral Code (Optional)',
@@ -185,6 +191,12 @@ const LANGS={
     spinPageTitle:'Daily Spin Wheel',spinPageSub:'Spin once a day for a free bonus!',
   }},
   bn:{n:'বাংলা',f:'🇧🇩',d:'ltr',t:{
+    tkDetailTitle:'টাস্কের বিস্তারিত',tkSearchPh:'টাস্ক খুঁজুন...',tkAll:'সব',tkNoMatch:'কোনো মিল পাওয়া যায়নি।',
+    tkDo:'করুন',tkRedo:'আবার',tkPending:'অপেক্ষমাণ',tkApproved:'অনুমোদিত',tkFull:'পূর্ণ',
+    tkRules:'টাস্কের নিয়ম',tkSubmitProof:'প্রমাণ জমা দিন',tkFillAll:'সব প্রয়োজনীয় ধাপ পূরণ করুন',
+    tkScreenshot:'স্ক্রিনশট',tkTextProof:'লিংক / লেখা',tkOptional:'(ঐচ্ছিক)',tkTextPh:'লিংক পেস্ট করুন বা এখানে লিখুন...',
+    tkImageOnly:'অনুগ্রহ করে একটি ছবি বেছে নিন।',tkTaskChanged:'টাস্কটি আপডেট হয়েছে। আবার খুলুন।',
+    tkNeedSql:'প্রমাণ সেভ করা যায়নি। সাপোর্টে যোগাযোগ করুন।',
     appName:'EARNOVA',appTag:'বিশ্বজুড়ে আসল টাকা উপার্জন করুন',
     li:'সাইন ইন',reg:'অ্যাকাউন্ট খুলুন',lo:'সাইন আউট',
     em:'ইমেইল',pw:'পাসওয়ার্ড',nm:'পুরো নাম',cpw:'পাসওয়ার্ড নিশ্চিত করুন',rc:'রেফারেল কোড (ঐচ্ছিক)',
