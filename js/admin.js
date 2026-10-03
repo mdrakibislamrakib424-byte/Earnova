@@ -274,6 +274,7 @@ async function loadAdminTasks(c){
     proofType:t.proof_type||t.proofType||'screenshot',
 task_type: t.task_type||'follow',
 max_per_user: t.max_per_user||1,
+    proofSteps: Array.isArray(t.proof_steps) ? t.proof_steps : [],
   }]);
 
   // Add task form
@@ -474,8 +475,8 @@ max_per_user: t.max_per_user||1,
     </select>
     <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;font-weight:600">Task Link *</label>
     <input id="tLink" type="url" placeholder="https://youtube.com/channel/..." style="width:100%;padding:10px 13px;border:1.5px solid #dbeafe;border-radius:10px;font-size:13px;background:#f8fafc;color:#0f172a;outline:none;font-family:inherit;margin-bottom:10px">
-    <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;font-weight:600">Description</label>
-    <input id="tDesc" type="text" placeholder="e.g. Subscribe and keep subscribed for 30 days" style="width:100%;padding:10px 13px;border:1.5px solid #dbeafe;border-radius:10px;font-size:13px;background:#f8fafc;color:#0f172a;outline:none;font-family:inherit;margin-bottom:10px">
+    <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;font-weight:600">Task Rules / Description</label>
+    <textarea id="tDesc" rows="4" placeholder="Task এর নিয়ম বিস্তারিত লিখুন (ইউজার detail page এ দেখবে)। যেমন:&#10;1. পেজটি ফলো করুন&#10;2. ভিডিওটি পুরো দেখুন&#10;3. অর্থপূর্ণ কমেন্ট করুন" style="width:100%;padding:10px 13px;border:1.5px solid #dbeafe;border-radius:10px;font-size:13px;background:#f8fafc;color:#0f172a;outline:none;font-family:inherit;margin-bottom:10px;resize:vertical;line-height:1.5"></textarea>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div>
         <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;font-weight:600">Reward ($)</label>
@@ -487,7 +488,15 @@ max_per_user: t.max_per_user||1,
       </div>
     </div>
         <label style="font-size:12px;color:#475569;display:block;margin-bottom:4px;font-weight:600">Max Workers</label>
-        <input id="tMax" type="number" placeholder="100" min="1" style="width:100%;padding:10px 13px;border:1.5px solid #dbeafe;border-radius:10px;font-size:13px;background:#f8fafc;color:#0f172a;outline:none;font-family:inherit">
+        <input id="tMax" type="number" placeholder="100" min="1" style="width:100%;padding:10px 13px;border:1.5px solid #dbeafe;border-radius:10px;font-size:13px;background:#f8fafc;color:#0f172a;outline:none;font-family:inherit;margin-bottom:14px">
+
+    <div style="border-top:1.5px dashed #cbd5e1;padding-top:12px;margin-bottom:12px">
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#0f172a;margin-bottom:3px">📋 Proof Steps (ইউজার কী কী জমা দেবে)</div>
+      <div id="tStepsHint" style="font-size:11px;color:#64748b;margin-bottom:8px;line-height:1.5">কোনো step না দিলে ইউজার শুধু ১টা screenshot জমা দেবে। নিচের বাটন দিয়ে নিজের মতো step যোগ করো।</div>
+      <div id="tStepsBox"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" onclick="adminAddProofStep('photo')" style="flex:1;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">➕ 📷 Photo step</button>
+        <button type="button" onclick="adminAddProofStep('text')" style="flex:1;background:#ecfdf5;border:1.5px solid #a7f3d0;color:#047857;border-radius:10px;padding:9px;font-size:12px;font-weight:700;cursor:pointer">➕ 📝 Text/Link step</button>
       </div>
     </div>
     <button onclick="addSocialTask()" class="btn bp bau">➕ Add Task</button>
@@ -508,7 +517,7 @@ max_per_user: t.max_per_user||1,
       <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">${escapeHtml(t.title)}</div>
       <div style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;${t.status==='active'?'background:#f0fdf4;color:#059669':'background:#fef2f2;color:#dc2626'}">${escapeHtml(t.status)}</div>
     </div>
-    <div style="font-size:12px;color:#475569;margin-bottom:8px">${escapeHtml(t.platform)} · $${t.reward} · Workers: ${t.currentWorkers||0}/${t.maxWorkers}</div>
+    <div style="font-size:12px;color:#475569;margin-bottom:8px">${escapeHtml(t.platform)} · $${t.reward} · Workers: ${t.currentWorkers||0}/${t.maxWorkers}${(t.proofSteps&&t.proofSteps.length)?' · 📋 '+t.proofSteps.length+' steps':' · 📷 1 screenshot'}</div>
     <div style="display:flex;gap:8px">
       <button onclick="toggleTask('${id}','${t.status}')" style="flex:1;background:${t.status==='active'?'#fef2f2':'#f0fdf4'};border:1px solid ${t.status==='active'?'#fca5a5':'#86efac'};border-radius:8px;padding:7px;font-size:11px;font-weight:700;color:${t.status==='active'?'#dc2626':'#059669'};cursor:pointer">${t.status==='active'?'⏸ Pause':'▶ Activate'}</button>
       <button onclick="deleteTask('${id}')" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;color:#64748b;cursor:pointer">🗑️</button>
@@ -517,6 +526,39 @@ max_per_user: t.max_per_user||1,
 
   c.innerHTML = html;
   loadPendingSubmissions();
+}
+
+// একটা submission এর সব proof (photo + text) দেখানোর HTML — নতুন `proofs` না থাকলে পুরনো photo_url
+function adminProofsHtml(s){
+  let proofs = s.proofs;
+  if(typeof proofs === 'string'){ try{ proofs = JSON.parse(proofs); }catch(e){ proofs = null; } }
+  if(!Array.isArray(proofs) || !proofs.length){
+    proofs = s.photo_url ? [{label:'Screenshot', type:'photo', value:s.photo_url}] : [];
+  }
+  if(!proofs.length){
+    return `<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:6px;padding:6px 10px;margin-bottom:8px">⚠️ No proof submitted</div>`;
+  }
+  return proofs.map((p,i)=>{
+    const lb = `<div style="font-size:11px;font-weight:700;color:#0f172a;margin-bottom:5px"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;border-radius:6px;background:#0f8f8a;color:#fff;font-size:10px;margin-right:6px">${i+1}</span>${escapeHtml(p.label||'')}</div>`;
+    if(p.type==='text'){
+      const v = String(p.value||'');
+      const isUrl = /^https?:\/\//i.test(v.trim());
+      return `<div style="margin-bottom:10px">${lb}
+        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 11px;font-size:12px;color:#0f172a;word-break:break-all;line-height:1.5">
+          ${isUrl ? `<a href="${escapeHtml(v.trim())}" onclick="openLink(this.href);return false;" style="color:#2563eb;font-weight:600">${escapeHtml(v)}</a>` : escapeHtml(v)}
+        </div></div>`;
+    }
+    if(!p.value){
+      return `<div style="margin-bottom:10px">${lb}<div style="font-size:11px;color:#94a3b8;background:#f8fafc;border-radius:8px;padding:8px 10px">🗑️ Photo deleted after review</div></div>`;
+    }
+    return `<div style="margin-bottom:10px">${lb}
+      <div style="position:relative;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden">
+        <img src="${escapeHtml(p.value)}" style="width:100%;height:auto;max-height:420px;object-fit:contain;display:block;border-radius:13px"
+          onerror="this.parentNode.innerHTML='<div style=\'padding:20px;text-align:center;color:#94a3b8;font-size:12px\'>⚠️ Photo failed to load</div>'">
+        <a href="${escapeHtml(p.value)}" onclick="openLink(this.href);return false;"
+          style="position:absolute;top:8px;right:8px;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;text-decoration:none;cursor:pointer">🔍 Full View</a>
+      </div></div>`;
+  }).join('');
 }
 
 async function loadPendingSubmissions(){
@@ -533,43 +575,15 @@ async function loadPendingSubmissions(){
       <div style="font-size:12px;font-weight:700;color:#059669">$${parseFloat(s.reward||0).toFixed(2)}</div>
     </div>
     <div style="font-size:11px;color:#64748b;margin-bottom:8px">👤 ${escapeHtml(s.user_email||s.email||s.uid)} · ${new Date(s.created_at||s.createdAt||Date.now()).toLocaleDateString()}</div>
-    ${s.photo_url ? `
-<div style="margin-bottom:10px">
-  <div style="position:relative;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:8px">
-    <img src="${s.photo_url}"
-      style="width:100%;height:auto;max-height:420px;object-fit:contain;display:block;border-radius:13px"
-      onerror="this.parentNode.innerHTML='<div style=\'padding:20px;text-align:center;color:#94a3b8;font-size:12px\'>⚠️ Photo failed to load</div>'">
-    <a href="${s.photo_url}" onclick="openLink(this.href);return false;"
-      style="position:absolute;top:8px;right:8px;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;text-decoration:none;cursor:pointer">
-      🔍 Full View
-    </a>
-  </div>
-  <div style="display:flex;gap:8px">
-    <button id="appBtn_${s.id}"
-      onclick="handleApprove('${s.id}','${s.uid}',${s.reward})"
-      style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(5,150,105,.3)">✅ Approve</button>
-    <button id="rejBtn_${s.id}"
-      onclick="handleReject('${s.id}')"
-      style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(220,38,38,.3)">❌ Reject</button>
-  </div>
-</div>` 
-: `
-<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);
-  border-radius:6px;padding:6px 10px;margin-bottom:8px">
-  ⚠️ No photo submitted
-</div>
-<div style="display:flex;gap:8px;margin-bottom:8px">
-  <button id="appBtn_${s.id}" 
-    onclick="handleApprove('${s.id}','${s.uid}',${s.reward})" 
-    style="flex:1;background:linear-gradient(135deg,#059669,#047857);
-    border:none;border-radius:8px;padding:7px;font-size:11px;
-    font-weight:700;color:#fff;cursor:pointer">✅ Approve + Pay</button>
-  <button id="rejBtn_${s.id}" 
-    onclick="handleReject('${s.id}')" 
-    style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);
-    border:none;border-radius:8px;padding:7px;font-size:11px;
-    font-weight:700;color:#fff;cursor:pointer">❌ Reject</button>
-</div>`}
+    ${adminProofsHtml(s)}
+    <div style="display:flex;gap:8px">
+      <button id="appBtn_${s.id}"
+        onclick="handleApprove('${s.id}','${s.uid}',${parseFloat(s.reward)||0})"
+        style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(5,150,105,.3)">✅ Approve</button>
+      <button id="rejBtn_${s.id}"
+        onclick="handleReject('${s.id}')"
+        style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(220,38,38,.3)">❌ Reject</button>
+    </div>
   </div>
 `).join('');
 }
@@ -664,23 +678,35 @@ async function approveSubmission(subId, uid, reward){
 async function deleteSubmissionPhoto(subId){
   try{
     const {data:sub} = await sb.from('submissions')
-      .select('photo_url').eq('id',subId).single();
-    if(sub?.photo_url){
-      const url = sub.photo_url;
-      const marker = '/object/public/proofs/';
-      const start = url.indexOf(marker);
-      if(start !== -1){
-        const filePath = decodeURIComponent(
-          url.substring(start + marker.length)
-        );
-        await sb.storage.from('proofs').remove([filePath]);
-        // ⚠️ ছোট পলিশ: শুধু আসল ফাইলটা Storage থেকে মুছলেই যথেষ্ট না —
-        // submissions row-এ photo_url ফিল্ডটা তখনও একটা মৃত (delete হয়ে
-        // যাওয়া) লিংক ধরে রাখে। এখন সেটাও খালি করে দেওয়া হচ্ছে, যাতে
-        // ভবিষ্যতে কোথাও এই submission history দেখানো হলে ভাঙা ছবি
-        // (broken image) না দেখায়।
-        await sb.from('submissions').update({photo_url: null}).eq('id', subId);
-      }
+      .select('photo_url,proofs').eq('id',subId).single();
+    const marker = '/object/public/proofs/';
+    const toPath = (url)=>{
+      if(!url) return null;
+      const start = String(url).indexOf(marker);
+      if(start === -1) return null;
+      return decodeURIComponent(String(url).substring(start + marker.length));
+    };
+    const paths = [];
+    const p0 = toPath(sub?.photo_url);
+    if(p0) paths.push(p0);
+    let proofs = sub?.proofs;
+    if(typeof proofs === 'string'){ try{ proofs = JSON.parse(proofs); }catch(e){ proofs = null; } }
+    let proofsChanged = false;
+    if(Array.isArray(proofs)){
+      proofs = proofs.map(p=>{
+        if(p && p.type==='photo' && p.value){
+          const pp = toPath(p.value);
+          if(pp){ if(!paths.includes(pp)) paths.push(pp); proofsChanged = true; return {...p, value:''}; }
+        }
+        return p;
+      });
+    }
+    if(paths.length){
+      await sb.storage.from('proofs').remove(paths);
+      // মৃত লিংক ধরে না রাখতে photo_url ও proofs এর photo value খালি করা হচ্ছে (text proof থেকে যায়)
+      const upd = {photo_url: null};
+      if(proofsChanged) upd.proofs = proofs;
+      await sb.from('submissions').update(upd).eq('id', subId);
     }
   }catch(e){}
 }
@@ -691,19 +717,66 @@ async function rejectSubmission(subId){
   showToast('❌ Submission rejected','blue');
 }
 
+// ─── Proof Steps builder (Admin → Add New Task) ─────────────
+// Admin নিজে ঠিক করে: কয়টা step, কোনটা Photo আর কোনটা Text/Link, কোনটা Required
+function adminAddProofStep(type){
+  const box = document.getElementById('tStepsBox');
+  if(!box) return;
+  if(box.querySelectorAll('.adm-step').length >= 6){ showToast('Max 6 steps','yellow'); return; }
+  const d = document.createElement('div');
+  d.className = 'adm-step';
+  d.style.cssText = 'background:#fbf9f3;border:1.5px solid #e5e7eb;border-radius:12px;padding:10px;margin-bottom:8px';
+  d.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+      <span class="adm-step-n" style="min-width:22px;height:22px;border-radius:7px;background:#0f8f8a;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">1</span>
+      <input class="ad-step-lb" type="text" maxlength="120" placeholder="${type==='text'?'e.g. Post এর লিংক দিন':'e.g. কমেন্টের স্ক্রিনশট'}" style="flex:1;padding:9px 11px;border:1.5px solid #dbeafe;border-radius:9px;font-size:13px;background:#fff;color:#0f172a;outline:none;font-family:inherit">
+      <button type="button" onclick="this.closest('.adm-step').remove();adminRenumberSteps()" style="background:#fee2e2;border:1px solid #fca5a5;color:#dc2626;border-radius:8px;width:30px;height:30px;font-weight:800;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <select class="ad-step-tp" style="padding:8px 10px;border:1.5px solid #dbeafe;border-radius:9px;font-size:12px;background:#fff;color:#0f172a;font-family:inherit">
+        <option value="photo" ${type!=='text'?'selected':''}>📷 Photo</option>
+        <option value="text" ${type==='text'?'selected':''}>📝 Text / Link</option>
+      </select>
+      <label style="font-size:12px;color:#475569;font-weight:600;display:flex;align-items:center;gap:5px"><input class="ad-step-rq" type="checkbox" checked> Required</label>
+    </div>`;
+  box.appendChild(d);
+  adminRenumberSteps();
+}
+function adminRenumberSteps(){
+  document.querySelectorAll('#tStepsBox .adm-step-n').forEach((n,i)=>n.textContent = i+1);
+  const hint = document.getElementById('tStepsHint');
+  if(hint) hint.style.display = document.querySelector('#tStepsBox .adm-step') ? 'none' : 'block';
+}
+function adminReadProofSteps(){
+  const out = [];
+  let bad = false;
+  document.querySelectorAll('#tStepsBox .adm-step').forEach(r=>{
+    const label = (r.querySelector('.ad-step-lb')?.value||'').trim().slice(0,120);
+    if(!label){ bad = true; return; }
+    out.push({
+      label,
+      type: r.querySelector('.ad-step-tp')?.value==='text' ? 'text' : 'photo',
+      required: !!r.querySelector('.ad-step-rq')?.checked
+    });
+  });
+  return bad ? null : out;
+}
+
 async function addSocialTask(){
   const title=document.getElementById('tTitle')?.value?.trim();
   const platform=document.getElementById('tPlatform')?.value;
   const taskType=document.getElementById('tTaskType')?.value||'follow';
-const maxPerUser=parseInt(document.getElementById('tMaxPerUser')?.value||1);
+  const maxPerUser=Math.max(1, parseInt(document.getElementById('tMaxPerUser')?.value||1)||1);
   const link=document.getElementById('tLink')?.value?.trim();
   const desc=document.getElementById('tDesc')?.value?.trim();
   const reward=parseFloat(document.getElementById('tReward')?.value||0);
   const maxW=parseInt(document.getElementById('tMax')?.value||100);
   if(!title||!link||!reward){ showToast('Fill all required fields','blue'); return; }
+  const steps = adminReadProofSteps();
+  if(steps===null){ showToast('প্রতিটা Proof Step এর নাম লেখো','yellow'); return; }
   const id='TASK-'+Date.now();
   const taskCountry = (document.getElementById('tCountry')?.value||'ALL').trim();
-  await sb.from('social_tasks').insert({
+  const baseRow = {
     id, title, platform, link,
     description: desc||title,
     reward: reward,
@@ -713,7 +786,20 @@ const maxPerUser=parseInt(document.getElementById('tMaxPerUser')?.value||1);
     country: taskCountry,
     proof_type: 'screenshot',
     created_at: Date.now()
-  });
+  };
+  const extra = { task_type: taskType, max_per_user: maxPerUser };
+  if(steps.length) extra.proof_steps = steps;
+  let { error } = await sb.from('social_tasks').insert({...baseRow, ...extra});
+  if(error && /task_type|max_per_user|proof_steps/i.test(error.message||'')){
+    // নতুন কলাম এখনো নেই (Supabase এ SQL চালানো হয়নি)
+    if(steps.length){
+      showToast('⚠️ আগে Supabase SQL Editor এ proof_steps এর SQL চালাও, তারপর আবার Add করো','yellow',6000);
+      return;
+    }
+    ({ error } = await sb.from('social_tasks').insert(baseRow));
+  }
+  if(error){ showToast('❌ Task add হয়নি: '+escapeHtml(error.message||''),'yellow',6000); return; }
+  EZCache.invalidate('socialTasks');
   showToast('✅ Task added!','green');
   loadAdminTasks($('#adminContent'));
 }
