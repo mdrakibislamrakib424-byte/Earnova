@@ -1006,6 +1006,9 @@ function initBackButton(){
     if(openModal){ openModal.classList.remove('show'); return; }
     if(typeof S!=='undefined' && S.adActive){ return; } // rewarded ad চলাকালীন back বন্ধ
 
+    // ১.৫) Social Task এর detail page খোলা থাকলে → আগে list এ ফিরে যাও
+    if(typeof S!=='undefined' && S.page==='social' && S.socialView){ closeSocialTask(); return; }
+
     // ২) Home ট্যাব ছাড়া অন্য কোথাও থাকলে → Home এ ফিরাও
     if(typeof S!=='undefined' && S.tab && S.tab!=='home'){
       navTo('home');
