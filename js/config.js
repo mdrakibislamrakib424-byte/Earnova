@@ -100,6 +100,12 @@ const fbStorage = sb.storage;
 //   created_at BIGINT
 // );
 //
+// -- 4b. SOCIAL TASK PROOF STEPS (নতুন) — পুরো SQL: social_tasks_update.sql
+// ALTER TABLE social_tasks ADD COLUMN IF NOT EXISTS task_type TEXT DEFAULT 'follow';
+// ALTER TABLE social_tasks ADD COLUMN IF NOT EXISTS max_per_user INT DEFAULT 1;
+// ALTER TABLE social_tasks ADD COLUMN IF NOT EXISTS proof_steps JSONB;
+// ALTER TABLE submissions  ADD COLUMN IF NOT EXISTS proofs JSONB;
+//
 // -- 5. NOTICES TABLE
 // CREATE TABLE IF NOT EXISTS notices (
 //   id TEXT PRIMARY KEY,
