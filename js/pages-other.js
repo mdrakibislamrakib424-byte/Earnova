@@ -259,46 +259,79 @@ async function loadNotices(){
 }
 
 // ─── SOCIAL TASKS PAGE ────────────────────────────────
-function buildSocialTasks(){
-  const ud=S.userData||{};
-  // ⚠️ ads-দেখে unlock করার সিস্টেম ডেভেলপারের অনুরোধে বন্ধ — Social Tasks এখন
-  // সবসময় unlocked, locked state-এর কোডটা প্রজেক্টে থেকে গেল (মুছিনি) কিন্তু
-  // isUnlocked সবসময় true থাকায় সেই ব্লকটা আর কখনো চলবে না।
-  const isUnlocked=true;
+// ══════════════════════════════════════════════════════════════
+// 📱 SOCIAL TASKS — compact list + আলাদা detail page + multi-step proof
+// ══════════════════════════════════════════════════════════════
+// • List: ছোট row (icon, title, reward, x/y progress, Do button) + search + category chip
+// • Do চাপলে → detail page (নিয়ম, Open Task, proof steps)
+// • Admin task বানানোর সময় proof_steps (JSONB) ঠিক করে: কোন step এ photo, কোনটায় text/link
+// • proof_steps না থাকলে (পুরনো task) → আগের মতো ১টা screenshot
+// • Approved / Pending / Full row তে click করলে কিছুই হয় না; শুধু Do ও Redo খোলে
+let _stTasks = {};          // taskId → task (country filter এর পর)
+let _stSubs = {};           // taskId → {approved, pending, latest}
+let _stQuery = '';
+let _stCat = 'all';
+let _stActiveSteps = [];    // detail page এ এই মুহূর্তে দেখানো steps
 
-  // Locked state — need to watch ads
-  if(!isUnlocked){
+// task এর proof steps — না থাকলে ১টা screenshot (legacy)
+function stSteps(t){
+  let st = t && t.proof_steps;
+  if(typeof st === 'string'){ try{ st = JSON.parse(st); }catch(e){ st = null; } }
+  if(!Array.isArray(st) || !st.length){
+    return [{label:'', type:'photo', required:true, legacy:true}];
+  }
+  return st.slice(0,8).map(s=>({
+    label: String((s&&s.label)||'').slice(0,120),
+    type: (s&&s.type)==='text' ? 'text' : 'photo',
+    required: !(s&&s.required===false)
+  }));
+}
+
+function stState(id, t){
+  const sub = _stSubs[id] || {approved:0, pending:0, latest:null};
+  const maxPer = parseInt(t.max_per_user)||1;
+  const isFull = (t.maxWorkers||0)>0 && (t.currentWorkers||0)>=(t.maxWorkers||0);
+  if(sub.pending>0) return 'pending';
+  if(sub.approved>=maxPer) return 'done';
+  if(isFull) return 'full';
+  if(sub.latest==='rejected') return 'redo';
+  return 'do';
+}
+
+function stTypeLabel(tp){
+  return tp==='follow'?T('taskTypeFollow'):tp==='subscribe'?T('taskTypeSubscribe'):tp==='watch'?T('taskTypeWatch')
+    :tp==='like'?T('taskTypeLike'):tp==='comment'?T('taskTypeComment'):tp==='share'?T('taskTypeShare'):T('taskTypeDefault');
+}
+
+function stIconHtml(t, size){
+  const logo = CFG.socialLogo && CFG.socialLogo[t.platform];
+  const fb = escapeHtml(t.icon||'📱');
+  return logo
+    ? `<img src="${logo}" alt="" style="width:${size}px;height:${size}px;object-fit:contain;border-radius:10px" onerror="this.parentNode.textContent='📱'">`
+    : fb;
+}
+
+function buildSocialTasks(){
+  // ── Detail mode ──
+  if(S.socialView){
     return `
     <div class="ph">
-      <div class="pt">${T('socialTitle')}</div>
-      <div class="ps">${T('socialSub')}</div>
+      <button class="btn bh bau bsm mb12" onclick="closeSocialTask()">← ${T('back')}</button>
+      <div class="pt">${T('tkDetailTitle')}</div>
     </div>
-    <div class="card" style="text-align:center;padding:30px 20px">
-      <div style="font-size:48px;margin-bottom:14px">🔒</div>
-      <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#0f172a;margin-bottom:8px">${T('socialLockedTitle')}</div>
-      <div style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.7">${T('socialLockedDesc')}</div>
-      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:20px">
-        <div style="font-size:12px;color:#1e40af;font-weight:600">${T('adsWatchedCount')} ${Math.min(adsWatched,5)}/5</div>
-        <div style="background:#dbeafe;border-radius:6px;height:6px;margin-top:8px;overflow:hidden">
-          <div style="background:linear-gradient(90deg,#2563eb,#059669);height:100%;width:${Math.min(adsWatched/5*100,100)}%;border-radius:6px"></div>
-        </div>
-      </div>
-      <button onclick="startAd(null,'socialUnlock',()=>{})" class="btn bp bau" style="width:100%">${T('watchAdUnlockBtn')}</button>
-    </div>`;
+    <div id="socialTasksList"><div class="card" style="text-align:center;padding:30px"><div style="font-size:32px;margin-bottom:10px">⏳</div><div style="font-size:13px;color:#64748b">${T('loadingTasksMsg')}</div></div></div>`;
   }
-
-  // Unlocked state — permanent access, কোনো countdown নেই যেহেতু ads-unlock সিস্টেম বন্ধ
+  // ── List mode ──
   return `
   <div class="ph">
     <div class="pt">${T('socialTitle')}</div>
     <div class="ps">${T('socialSub')}</div>
   </div>
-  <div style="background:rgba(5,150,105,.1);border:1.5px solid rgba(5,150,105,.3);border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
-    <div style="font-size:20px">✅</div>
-    <div style="font-size:12px;color:#065f46;font-weight:600">${T('unlockedWord')}</div>
+  <div class="tk-searchbox">
+    <span class="tk-searchic">🔍</span>
+    <input id="tkSearch" class="tk-search" type="search" value="${escapeHtml(_stQuery)}" placeholder="${escapeHtml(T('tkSearchPh'))}" oninput="stSetQuery(this.value)">
   </div>
-
-  <!-- Available Tasks -->
+  <div id="tkChips" class="tk-chips"></div>
   <div id="socialTasksList"><div class="card" style="text-align:center;padding:30px"><div style="font-size:32px;margin-bottom:10px">⏳</div><div style="font-size:13px;color:#64748b">${T('loadingTasksMsg')}</div></div></div>
 
   <!-- My Submissions -->
@@ -308,10 +341,26 @@ function buildSocialTasks(){
   </div>`;
 }
 
+function openSocialTask(id){
+  S.socialView = id;
+  render();
+  window.scrollTo(0,0);
+}
+function closeSocialTask(){
+  S.socialView = null;
+  render();
+  window.scrollTo(0,0);
+}
+
+function stSetQuery(v){ _stQuery = String(v||'').trim().toLowerCase(); stRenderRows(); }
+function stSetCat(c){ _stCat = c; stRenderChips(); stRenderRows(); }
+
 // Load social tasks from Supabase
 async function loadSocialTasks(){
   const el = document.getElementById('socialTasksList');
   if(!el) return;
+  // detail form খোলা থাকলে (ইউজার লিখছে/ছবি বেছেছে) background refresh এ মুছে ফেলা যাবে না
+  if(S.socialView && el.dataset.detailFor===S.socialView && el.querySelector('#tkForm')) return;
   try{
     // Use cache — only call Supabase if cache expired
     let tasks = EZCache.get('socialTasks');
@@ -330,135 +379,225 @@ async function loadSocialTasks(){
     }
     // ── Country filter ──
     const filteredEntries = Object.entries(tasks).filter(([,t])=>taskVisibleForUser(t));
-    const filteredTasks = Object.fromEntries(filteredEntries);
-    tasks = filteredTasks;
-
-    const list = Object.entries(tasks);
-    if(!list.length){
-      el.innerHTML=`<div class="card" style="text-align:center;padding:30px"><div style="font-size:32px;margin-bottom:10px">😔</div><div style="font-size:13px;color:#64748b">${T('noTasksCountryMsg')}</div></div>`;
-      return;
-    }
+    _stTasks = Object.fromEntries(filteredEntries);
 
     // ── submissions টেবিল থেকে status নাও (সরাসরি) ──
     const uid = S.user?.uid;
-    let submissionMap = {}; // taskId → {status, subId}
+    _stSubs = {};
     if(uid){
       const {data:mySubData} = await sb.from('submissions')
         .select('id,task_id,status')
         .eq('uid', uid)
         .order('created_at', {ascending:false});
       (mySubData||[]).forEach(s=>{
-        // প্রতিটা task_id এর latest submission রাখো
-        if(!submissionMap[s.task_id]){
-          submissionMap[s.task_id] = {status: s.status, subId: s.id};
-        }
+        const o = _stSubs[s.task_id] || (_stSubs[s.task_id] = {approved:0, pending:0, latest:null});
+        if(o.latest===null) o.latest = s.status;      // প্রথমটাই latest (created_at desc)
+        if(s.status==='approved') o.approved++;
+        else if(s.status==='pending') o.pending++;
       });
     }
 
-    el.innerHTML = list.map(([id,t])=>{
-      // submissions table থেকে status দেখো
-      const sub = submissionMap[id];
-      const subStatus = sub?.status || null; // 'pending' | 'approved' | 'rejected' | null
+    if(S.socialView){ stRenderDetail(el); setupSubmissionsRealtime(); return; }
 
-      const isDone = subStatus === 'approved';
-      const isPending = subStatus === 'pending';
-      const isRejected = subStatus === 'rejected';
-      // rejected হলে আবার submit করা যাবে
-      const canSubmit = !subStatus || subStatus === 'rejected';
-
-      const taskTypeLabel = t.task_type==='follow'?T('taskTypeFollow'):t.task_type==='subscribe'?T('taskTypeSubscribe'):t.task_type==='watch'?T('taskTypeWatch'):t.task_type==='like'?T('taskTypeLike'):t.task_type==='comment'?T('taskTypeComment'):t.task_type==='share'?T('taskTypeShare'):T('taskTypeDefault');
-      const taskTypeColor = t.task_type==='follow'?'#7c3aed':t.task_type==='subscribe'?'#4f46e5':t.task_type==='watch'?'#2563eb':t.task_type==='like'?'#0891b2':t.task_type==='comment'?'#0d9488':t.task_type==='share'?'#6366f1':'#475569';
-      const isFull = (t.maxWorkers||0)>0 && (t.currentWorkers||0)>=(t.maxWorkers||0);
-
-      // ── টাস্ক টাইপ অনুযায়ী ভিন্ন gradient (নতুন/এখনো-শুরু-না-হওয়া টাস্কের জন্য) ──
-      const typeGrad = t.task_type==='follow'?'linear-gradient(135deg,#7c3aed,#5b21b6)'
-        : t.task_type==='subscribe'?'linear-gradient(135deg,#4f46e5,#3730a3)'
-        : t.task_type==='watch'?'linear-gradient(135deg,#2563eb,#1e40af)'
-        : t.task_type==='like'?'linear-gradient(135deg,#0891b2,#0e7490)'
-        : t.task_type==='comment'?'linear-gradient(135deg,#0d9488,#0f766e)'
-        : t.task_type==='share'?'linear-gradient(135deg,#6366f1,#4338ca)'
-        : 'linear-gradient(135deg,#475569,#334155)';
-
-      // ── Professional Status Block ──
-      const headGrad = isDone
-        ? 'linear-gradient(135deg,#ec4899,#be185d)'
-        : isPending ? 'linear-gradient(135deg,#d97706,#b45309)'
-        : isRejected ? 'linear-gradient(135deg,#dc2626,#b91c1c)'
-        : isFull ? 'linear-gradient(135deg,#64748b,#475569)'
-        : typeGrad;
-      const borderColor = isDone?'#f9a8d4':isPending?'#fde68a':isRejected?'#fca5a5':isFull?'#cbd5e1':'#c7d2fe';
-
-      let statusBlock = '';
-      if(isDone){
-        statusBlock = `<div class="stc-status stc-status-approved">${T('taskApprovedMsg')}</div>`;
-      } else if(isPending){
-        statusBlock = `<div class="stc-status stc-status-pending">${T('waitingApprovalMsg')}</div>`;
-      } else if(isRejected){
-        statusBlock = `
-        <div class="stc-status stc-status-rejected" style="margin-bottom:10px;width:100%">${T('rejectedResubmitMsg')}</div>
-        <div style="font-size:11px;color:#d97706;background:rgba(217,119,6,.07);border:1px solid rgba(217,119,6,.18);border-radius:9px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:7px">
-          <span style="font-size:15px">⚠️</span><span>${T('completeAgainMsg')}</span>
-        </div>
-        <div class="stc-upload" id="uploadArea_${id}" onclick="document.getElementById('photoInput_${id}').click()">
-          <div id="uploadPreview_${id}" style="font-size:12px;color:#94a3b8">
-            <div style="font-size:30px;margin-bottom:5px">📸</div>
-            <div style="font-weight:600">${T('tapSelectScreenshot')}</div>
-          </div>
-          <input type="file" id="photoInput_${id}" accept="image/*" style="display:none" onchange="previewPhoto('${id}',this)">
-        </div>
-        <button id="submitBtn_${id}" data-task-title="${escapeHtml(t.title||'')}" data-task-reward="${escapeHtml(String(t.reward||0))}" onclick="submitTaskProof('${id}', this.dataset.taskTitle, this.dataset.taskReward)" disabled class="stc-submit-btn stc-submit-off">${T('selectPhotoFirstBtn')}</button>`;
-      } else if(isFull){
-        statusBlock = `<div class="stc-status stc-status-full">${T('allSlotsFilledMsg')}</div>`;
-      } else {
-        statusBlock = `
-        <div style="font-size:11px;color:#d97706;background:rgba(217,119,6,.07);border:1px solid rgba(217,119,6,.18);border-radius:9px;padding:9px 12px;margin-bottom:10px;display:flex;align-items:center;gap:7px">
-          <span style="font-size:15px">⚠️</span><span>${T('completeFirstMsg')}</span>
-        </div>
-        <div class="stc-upload" id="uploadArea_${id}" onclick="document.getElementById('photoInput_${id}').click()">
-          <div id="uploadPreview_${id}" style="font-size:12px;color:#94a3b8">
-            <div style="font-size:30px;margin-bottom:5px">📸</div>
-            <div style="font-weight:600">${T('tapSelectScreenshot')}</div>
-          </div>
-          <input type="file" id="photoInput_${id}" accept="image/*" style="display:none" onchange="previewPhoto('${id}',this)">
-        </div>
-        <button id="submitBtn_${id}" data-task-title="${escapeHtml(t.title||'')}" data-task-reward="${escapeHtml(String(t.reward||0))}" onclick="submitTaskProof('${id}', this.dataset.taskTitle, this.dataset.taskReward)" disabled class="stc-submit-btn stc-submit-off">${T('selectPhotoFirstBtn')}</button>`;
-      }
-
-      return `
-      <div class="stc" style="border-color:${borderColor};${isDone?'opacity:.82':''}">
-        <div class="stc-head" style="background:${headGrad}">
-          <div class="stc-icon">${CFG.socialLogo[t.platform]?`<img src="${CFG.socialLogo[t.platform]}" style="width:40px;height:40px;object-fit:contain;border-radius:10px" onerror="this.parentNode.textContent='📱'">`:(t.icon||'📱')}</div>
-          <div class="stc-meta">
-            <div class="stc-title" style="color:#fff">${escapeHtml(t.title)}</div>
-            <div class="stc-tags">
-              <span class="stc-tag" style="background:rgba(255,255,255,.22);color:#fff">${taskTypeLabel}</span>
-              <span class="stc-tag" style="background:rgba(0,0,0,.18);color:rgba(255,255,255,.9)">${escapeHtml(t.platform||'Platform')}</span>
-            </div>
-          </div>
-          <div class="stc-reward" style="background:rgba(255,255,255,.18);backdrop-filter:blur(8px)">
-            <div class="stc-reward-label" style="color:rgba(255,255,255,.8)">${isDone?T('statusDone'):isPending?T('statusWait'):isRejected?T('statusFail'):isFull?T('statusFull'):T('statusEarn')}</div>
-            <div class="stc-reward-val" style="color:#fff">${isDone?'✅':isPending?'⏳':isRejected?'❌':isFull?'🔴':'$'+parseFloat(t.reward||0).toFixed(2)}</div>
-          </div>
-        </div>
-        <div class="stc-body">
-          <div class="stc-desc">${escapeHtml(t.description)}</div>
-          <div class="stc-slots">
-            <div style="font-size:11px;color:${isFull?'#dc2626':'#64748b'};font-weight:${isFull?'700':'500'}">
-              ${isFull?'🔴 '+T('fullWord'):'👥 '+(t.currentWorkers||0)+'/'+(t.maxWorkers||'∞')+' '+T('slotsWord')}
-            </div>
-            ${(isDone||isPending)
-              ? `<span style="font-size:11px;color:#059669;font-weight:700">${T('submittedLabel')}</span>`
-              : `<a href="${t.link}" onclick="openLink('${t.link}');return false;" style="background:rgba(37,99,235,.08);border:1px solid #bfdbfe;border-radius:9px;padding:5px 13px;font-size:11px;font-weight:700;color:#2563eb;text-decoration:none">${T('openTaskBtn')}</a>`
-            }
-          </div>
-          ${statusBlock}
-        </div>
-      </div>`;
-    }).join('');
-
+    stRenderChips();
+    stRenderRows();
     loadMySubmissions();
     setupSubmissionsRealtime();
   } catch(e){ el.innerHTML=`<div class="card" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px">${T('errorLoadingTasksMsg')}</div>`; }
+}
+
+function stRenderChips(){
+  const box = document.getElementById('tkChips');
+  if(!box) return;
+  const types = [];
+  Object.values(_stTasks).forEach(t=>{ const k=t.task_type||'follow'; if(!types.includes(k)) types.push(k); });
+  if(types.length<2){ box.innerHTML=''; if(_stCat!=='all') _stCat='all'; return; }
+  if(_stCat!=='all' && !types.includes(_stCat)) _stCat='all';
+  box.innerHTML = [`<button class="tk-chip ${_stCat==='all'?'on':''}" onclick="stSetCat('all')">${T('tkAll')}</button>`]
+    .concat(types.map(k=>`<button class="tk-chip ${_stCat===k?'on':''}" onclick="stSetCat('${k}')">${stTypeLabel(k)}</button>`)).join('');
+}
+
+function stRenderRows(){
+  const el = document.getElementById('socialTasksList');
+  if(!el || S.socialView) return;
+  const all = Object.entries(_stTasks);
+  if(!all.length){
+    el.innerHTML=`<div class="card" style="text-align:center;padding:30px"><div style="font-size:32px;margin-bottom:10px">😔</div><div style="font-size:13px;color:#64748b">${T('noTasksCountryMsg')}</div></div>`;
+    return;
+  }
+  const rank = {do:0, redo:0, pending:1, done:2, full:3};
+  let list = all.filter(([,t])=>{
+    if(_stCat!=='all' && (t.task_type||'follow')!==_stCat) return false;
+    if(_stQuery){
+      const hay = ((t.title||'')+' '+(t.platform||'')+' '+stTypeLabel(t.task_type||'follow')).toLowerCase();
+      if(!hay.includes(_stQuery)) return false;
+    }
+    return true;
+  }).map(([id,t],i)=>({id,t,i,st:stState(id,t)}));
+  list.sort((a,b)=> (rank[a.st]-rank[b.st]) || (a.i-b.i));
+  if(!list.length){
+    el.innerHTML=`<div class="card" style="text-align:center;padding:24px"><div style="font-size:28px;margin-bottom:8px">🔎</div><div style="font-size:13px;color:#64748b">${T('tkNoMatch')}</div></div>`;
+    return;
+  }
+  el.innerHTML = list.map(x=>stRowHtml(x.id,x.t,x.st)).join('');
+}
+
+function stRowHtml(id, t, st){
+  const steps = stSteps(t);
+  const nPhoto = steps.filter(s=>s.type==='photo').length;
+  const nText = steps.length - nPhoto;
+  const cur = t.currentWorkers||0, max = t.maxWorkers||0;
+  const pct = max>0 ? Math.min(100, Math.round(cur/max*100)) : 0;
+  const safeId = String(id).replace(/[^\w\-]/g,'');
+  let action = '', cls = 'tk-row', click = '';
+  if(st==='do' || st==='redo'){
+    click = ` onclick="openSocialTask('${safeId}')"`;
+    action = st==='redo'
+      ? `<span class="tk-btn tk-redo">↻ ${T('tkRedo')}</span>`
+      : `<span class="tk-btn tk-do">${T('tkDo')}</span>`;
+  } else {
+    cls += ' tk-locked';
+    action = st==='pending' ? `<span class="tk-pill tk-pill-wait">⏳ ${T('tkPending')}</span>`
+      : st==='done' ? `<span class="tk-pill tk-pill-ok">✅ ${T('tkApproved')}</span>`
+      : `<span class="tk-pill tk-pill-full">${T('tkFull')}</span>`;
+  }
+  const need = `${nPhoto?`📷 ${nPhoto}`:''}${nPhoto&&nText?'  ':''}${nText?`📝 ${nText}`:''}`;
+  return `
+  <div class="${cls}"${click}>
+    <div class="tk-ic">${stIconHtml(t,30)}</div>
+    <div class="tk-mid">
+      <div class="tk-title">${escapeHtml(t.title)}</div>
+      <div class="tk-meta"><span class="tk-tag">${stTypeLabel(t.task_type||'follow')}</span><span class="tk-need">${need}</span></div>
+      <div class="tk-prog"><div class="tk-bar"><i style="width:${pct}%"></i></div><span>${cur}/${max>0?max:'∞'}</span></div>
+    </div>
+    <div class="tk-side">
+      <div class="tk-reward">$${parseFloat(t.reward||0).toFixed(3)}</div>
+      ${action}
+    </div>
+  </div>`;
+}
+
+function stRenderDetail(el){
+  const id = S.socialView;
+  const t = _stTasks[id];
+  el.dataset.detailFor = '';
+  if(!t){
+    el.innerHTML = `<div class="card" style="text-align:center;padding:30px"><div style="font-size:32px;margin-bottom:10px">😔</div><div style="font-size:13px;color:#64748b;margin-bottom:14px">${T('taskNotFoundMsg')}</div><button class="btn bp bau" onclick="closeSocialTask()">← ${T('back')}</button></div>`;
+    return;
+  }
+  const st = stState(id, t);
+  const steps = stSteps(t);
+  _stActiveSteps = steps;
+  const cur = t.currentWorkers||0, max = t.maxWorkers||0;
+  const pct = max>0 ? Math.min(100, Math.round(cur/max*100)) : 0;
+  const link = escapeHtml(t.link||'');
+  const sub = _stSubs[id] || {};
+
+  const hero = `
+  <div class="tk-hero">
+    <div class="tk-hero-top">
+      <div class="tk-hero-ic">${stIconHtml(t,34)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="tk-hero-title">${escapeHtml(t.title)}</div>
+        <div class="tk-hero-tags"><span>${stTypeLabel(t.task_type||'follow')}</span><span>${escapeHtml(t.platform||'')}</span></div>
+      </div>
+      <div class="tk-hero-rw"><small>${T('statusEarn')}</small><b>$${parseFloat(t.reward||0).toFixed(3)}</b></div>
+    </div>
+    <div class="tk-hero-prog"><div class="tk-bar tk-bar-dk"><i style="width:${pct}%"></i></div><span>${cur}/${max>0?max:'∞'} ${T('slotsWord')}</span></div>
+  </div>`;
+
+  const rules = `
+  <div class="card">
+    <div class="card-hd">📌 ${T('tkRules')}</div>
+    <div class="tk-rules">${escapeHtml(t.description||'')}</div>
+    <button class="btn tk-open" data-u="${link}" onclick="openLink(this.dataset.u)">🔗 ${T('openTaskBtn').replace(/^🔗\s*/,'')}</button>
+  </div>`;
+
+  let proofBlock = '';
+  if(st==='pending' || st==='done' || st==='full'){
+    const msg = st==='pending' ? T('waitingApprovalMsg') : st==='done' ? T('taskApprovedMsg') : T('allSlotsFilledMsg');
+    const cl = st==='pending' ? 'stc-status-pending' : st==='done' ? 'stc-status-approved' : 'stc-status-full';
+    proofBlock = `<div class="card"><div class="stc-status ${cl}">${msg}</div></div>`;
+  } else {
+    const redo = st==='redo' ? `<div class="stc-status stc-status-rejected" style="margin-bottom:12px">${T('rejectedResubmitMsg')}</div>` : '';
+    proofBlock = `
+    <div class="card" id="tkForm">
+      <div class="card-hd">📤 ${T('tkSubmitProof')}</div>
+      ${redo}
+      ${steps.map((s,i)=>stStepHtml(s,i)).join('')}
+      <button id="tkSubmit" class="stc-submit-btn stc-submit-off" disabled onclick="submitTaskProof('${String(id).replace(/[^\w\-]/g,'')}')">${T('tkFillAll')}</button>
+    </div>`;
+  }
+  el.innerHTML = hero + rules + proofBlock;
+  if(st==='do' || st==='redo') el.dataset.detailFor = id;
+}
+
+function stStepHtml(s, i){
+  const label = s.label || (s.legacy ? T('tkScreenshot') : (s.type==='photo' ? T('tkScreenshot') : T('tkTextProof')));
+  const req = s.required ? '<b class="tk-req">*</b>' : `<em class="tk-opt">${T('tkOptional')}</em>`;
+  const head = `<div class="tk-step-hd"><span class="tk-num">${i+1}</span><div class="tk-step-lb">${escapeHtml(label)} ${req}</div></div>`;
+  if(s.type==='text'){
+    return `<div class="tk-step">${head}
+      <textarea id="tkTxt_${i}" class="tk-inp" rows="2" maxlength="500" placeholder="${escapeHtml(T('tkTextPh'))}" oninput="stRefreshSubmit()"></textarea>
+    </div>`;
+  }
+  return `<div class="tk-step">${head}
+    <div class="tk-drop" id="tkDrop_${i}" onclick="document.getElementById('tkFile_${i}').click()">
+      <div id="tkPrev_${i}">
+        <div class="tk-drop-ic">☁️</div>
+        <div class="tk-drop-t">${T('tapSelectScreenshot')}</div>
+        <div class="tk-drop-s">JPG, PNG, WebP · Max 5MB</div>
+      </div>
+      <input type="file" id="tkFile_${i}" accept="image/*" style="display:none" onchange="stPickPhoto(${i},this)">
+    </div>
+  </div>`;
+}
+
+function stPickPhoto(i, input){
+  const file = input.files[0];
+  if(!file) return;
+  if(!/^image\//.test(file.type||'')){ toast(T('tkImageOnly'),'e'); input.value=''; return; }
+  if(file.size > 5*1024*1024){ toast(T('fileTooLargeMsg'),'e'); input.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('tkPrev_'+i);
+    const drop = document.getElementById('tkDrop_'+i);
+    if(prev){
+      prev.innerHTML = `<img src="${e.target.result}" class="tk-prev-img" alt="">
+        <div class="tk-prev-row"><span>✅ ${escapeHtml(file.name)}</span><button type="button" class="tk-prev-x" onclick="event.stopPropagation();stClearPhoto(${i})">✕</button></div>`;
+    }
+    if(drop) drop.classList.add('has');
+    stRefreshSubmit();
+  };
+  reader.readAsDataURL(file);
+}
+
+function stClearPhoto(i){
+  const inp = document.getElementById('tkFile_'+i);
+  if(inp) inp.value = '';
+  const prev = document.getElementById('tkPrev_'+i);
+  const drop = document.getElementById('tkDrop_'+i);
+  if(prev) prev.innerHTML = `<div class="tk-drop-ic">☁️</div><div class="tk-drop-t">${T('tapSelectScreenshot')}</div><div class="tk-drop-s">JPG, PNG, WebP · Max 5MB</div>`;
+  if(drop) drop.classList.remove('has');
+  stRefreshSubmit();
+}
+
+// সব required step ভরা হলেই Submit চালু
+function stRefreshSubmit(){
+  const btn = document.getElementById('tkSubmit');
+  if(!btn || btn.dataset.busy==='1') return;
+  let ok = true, any = false;
+  _stActiveSteps.forEach((s,i)=>{
+    let filled = false;
+    if(s.type==='photo') filled = !!document.getElementById('tkFile_'+i)?.files[0];
+    else filled = (document.getElementById('tkTxt_'+i)?.value||'').trim().length>=3;
+    if(filled) any = true;
+    if(s.required && !filled) ok = false;
+  });
+  ok = ok && any;
+  btn.disabled = !ok;
+  btn.className = 'stc-submit-btn ' + (ok ? 'stc-submit-on' : 'stc-submit-off');
+  btn.textContent = ok ? T('submitProofBtn') : T('tkFillAll');
 }
 
 // ── Supabase Realtime for submissions ─────────────────
@@ -534,58 +673,58 @@ function compressImage(file, maxKB=100){
   });
 }
 
-// ── Photo preview function ─────────────────────────────
-function previewPhoto(taskId, input){
-  const file = input.files[0];
-  if(!file) return;
-  // File size check — 5MB max
-  if(file.size > 5*1024*1024){
-    toast(T('fileTooLargeMsg'),'e'); 
-    input.value=''; 
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = e => {
-    const preview = document.getElementById('uploadPreview_'+taskId);
-    const area = document.getElementById('uploadArea_'+taskId);
-    if(preview){
-      preview.innerHTML = `<img src="${e.target.result}" style="max-width:100%;max-height:150px;border-radius:8px;object-fit:cover">
-        <div style="font-size:11px;color:#059669;font-weight:600;margin-top:6px">✅ ${file.name}</div>`;
-    }
-    if(area) area.style.border = '2px solid #059669';
-    // ✅ Photo select করলে Submit button enable হবে
-    const submitBtn = document.getElementById('submitBtn_'+taskId);
-    if(submitBtn){
-      submitBtn.disabled = false;
-      submitBtn.style.background = 'linear-gradient(135deg,#2563eb,#1d4ed8)';
-      submitBtn.style.color = '#fff';
-      submitBtn.style.cursor = 'pointer';
-      submitBtn.textContent = T('submitProofBtn');
-    }
-  };
-  reader.readAsDataURL(file);
+// storage থেকে একসাথে কয়েকটা proof ছবি মুছে ফেলা (আপলোড ব্যর্থ হলে cleanup)
+async function stRemoveUploads(paths){
+  try{ if(paths && paths.length) await sb.storage.from('proofs').remove(paths); }catch(e){}
 }
 
-async function submitTaskProof(taskId, taskTitle, reward){
+async function submitTaskProof(taskId){
   const uid = S.user?.uid||'unknown';
   const email = S.user?.email||'unknown';
+  const submitBtn = document.getElementById('tkSubmit');
+  if(submitBtn && submitBtn.dataset.busy==='1') return;   // double-tap guard
 
-  // ── Photo check ──────────────────────────────────────
-  const photoInput = document.getElementById('photoInput_'+taskId);
-  let file = photoInput?.files[0];
-if(!file){
-  toast(T('selectScreenshotFirstMsg'),'e'); return;
-}
-file = await compressImage(file, 100);
+  // ── ইনপুট সংগ্রহ + required যাচাই ───────────────────────
+  const steps = _stActiveSteps || [];
+  const collected = [];   // {i, s, file?, text?}
+  for(let i=0;i<steps.length;i++){
+    const s = steps[i];
+    if(s.type==='photo'){
+      const f = document.getElementById('tkFile_'+i)?.files[0];
+      if(!f){ if(s.required){ toast(T('selectScreenshotFirstMsg'),'e'); return; } continue; }
+      collected.push({i, s, file:f});
+    } else {
+      const v = (document.getElementById('tkTxt_'+i)?.value||'').trim();
+      if(v.length<3){ if(s.required){ toast(T('tkFillAll'),'e'); return; } continue; }
+      collected.push({i, s, text:v.slice(0,500)});
+    }
+  }
+  if(!collected.length){ toast(T('tkFillAll'),'e'); return; }
 
-  // ── Submit button disable ──────────────────────────
-  const submitBtn = document.getElementById('submitBtn_'+taskId);
-  if(submitBtn){ submitBtn.disabled=true; submitBtn.textContent='⏳ Uploading...'; }
+  // ── Submit button busy ──────────────────────────────────
+  const setBusy = (txt)=>{ if(submitBtn){ submitBtn.dataset.busy='1'; submitBtn.disabled=true; submitBtn.textContent=txt; } };
+  const clearBusy = ()=>{ if(submitBtn){ submitBtn.dataset.busy='0'; submitBtn.disabled=false; submitBtn.className='stc-submit-btn stc-submit-on'; submitBtn.textContent=T('submitProofBtn'); } };
+  setBusy('⏳ Uploading...');
 
+  let slotClaimedAtomically = false;
+  const uploaded = [];
   try{
+    // ── ছবি compress (প্রতিটা ~100KB) ───────────────────────
+    for(const c of collected){
+      if(c.file) c.file = await compressImage(c.file, 100);
+    }
+
     // ── Task data check ──────────────────────────────
     const {data:taskData} = await sb.from('social_tasks').select('*').eq('id',taskId).single();
-    if(!taskData){ toast(T('taskNotFoundMsg'),'e'); return; }
+    if(!taskData){ toast(T('taskNotFoundMsg'),'e'); clearBusy(); return; }
+    // admin steps বদলে থাকলে পুরনো ফর্মে জমা নেওয়া হবে না
+    const freshSteps = stSteps(taskData);
+    if(freshSteps.length !== steps.length || freshSteps.some((s,i)=>s.type!==steps[i].type)){
+      toast(T('tkTaskChanged'),'w');
+      EZCache.invalidate('socialTasks');
+      S.socialView = null; render();
+      return;
+    }
 
     // ── Duplicate check with max_per_user ────────────
     const {data:dupChecks} = await sb.from('submissions')
@@ -594,163 +733,153 @@ file = await compressImage(file, 100);
     const approvedCount = (dupChecks||[]).filter(s=>s.status==='approved').length;
     const pendingCount = (dupChecks||[]).filter(s=>s.status==='pending').length;
     if(approvedCount >= maxAllowed){
-      toast(T('alreadyCompletedTaskMsg'),'w'); 
-      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
+      toast(T('alreadyCompletedTaskMsg'),'w');
+      clearBusy();
       return;
     }
     if(pendingCount > 0){
-      toast(T('alreadySubmittedWaitingMsg'),'w'); 
-      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
+      toast(T('alreadySubmittedWaitingMsg'),'w');
+      clearBusy();
       return;
     }
 
     // ══════════════════════════════════════════════════════════
-    // ⚠️ ফিক্স — Task Slot Overselling Race Condition
+    // Task Slot Overselling Race Condition — atomic_claim_slot RPC
+    // (ছবি আপলোডের *আগেই* সিট বুক; ঠিক যতগুলো সিট খালি ততজনই সফল হবে)
     // ══════════════════════════════════════════════════════════
-    // আগে এখানে শুধু taskData (কিছুক্ষণ আগে fetch করা, তাই সামান্য
-    // পুরনো হতে পারে) থেকে current_workers/max_workers পড়ে চেক করা হতো।
-    // ধরুন ১০ সিটের টাস্কে ৯টা ভরা (১টা বাকি) — যদি অনেক ইউজার প্রায়
-    // একই মুহূর্তে Submit চাপে, প্রত্যেকেই "৯/১০, সিট আছে" দেখতে পেত
-    // (কারো ইনক্রিমেন্টই তখনো একে অপরের কাছে পৌঁছায়নি) — ফলে ১টা মাত্র
-    // সিটের জন্য শত শত submission ঢুকে যেতে পারত, যাদের প্রায় সবাইকেই
-    // পরে Admin reject করতে বাধ্য হতো — ইউজারদের ছবি তোলা/আপলোড করার
-    // সময়/ডেটা সব বৃথা যেত।
-    //
-    // এখন Database-এই একটাই atomic অপারেশনে "সিট খালি আছে কিনা চেক করা"
-    // আর "সিট বুক করা" একসাথে হয় (atomic_claim_slot RPC, ছবি আপলোডের
-    // *আগেই* কল করা হচ্ছে) — ঠিক যতগুলো সিট খালি ততজনই সফল হবে, বাকিরা
-    // সাথে সাথেই "Full" মেসেজ পাবে, ছবি আপলোডের ঝামেলাতেই যেতে হবে না।
     const maxW = parseInt(taskData.max_workers||0);
     let newCur = null;      // এই সাবমিশনের পর টাস্কের নতুন current_workers সংখ্যা
-    let slotClaimedAtomically = false; // নিচে আপলোড/সেভ ব্যর্থ হলে slot ফেরত দিতে লাগবে
 
     if(maxW > 0){
       const { data: claimResult, error: slotErr } = await sb.rpc('atomic_claim_slot', {
         p_table:'social_tasks', p_id:taskId, p_cur_field:'current_workers', p_max_field:'max_workers'
       });
       if(slotErr){
-        // RPC না থাকলে (Supabase-এ SQL এখনো বসানো হয়নি) — কম নিরাপদ
-        // fallback, অন্তত ফিচারটা যেন সম্পূর্ণ বন্ধ না হয়ে যায় তার জন্য
-        // (এই ফলব্যাক পথে race window থেকেই যায়)
+        // RPC না থাকলে (Supabase-এ SQL এখনো বসানো হয়নি) — কম নিরাপদ fallback
         const curW = parseInt(taskData.current_workers||0);
         if(curW >= maxW){
           toast(T('taskFullMsg'),'w');
-          if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
+          clearBusy();
           return;
         }
         newCur = curW + 1;
       } else if(claimResult === null){
-        // সিট claim ব্যর্থ — টাস্ক ইতিমধ্যে পুরো ভর্তি
         toast(T('taskFullMsg'),'w');
-        if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
+        clearBusy();
         return;
       } else {
-        newCur = claimResult; // সিট সফলভাবে বুক — Database-এ current_workers ইতিমধ্যেই +1 হয়ে গেছে
+        newCur = claimResult;
         slotClaimedAtomically = true;
       }
     }
-    // slotClaimedAtomically হলে, নিচে আপলোড/সেভ কোনো কারণে ব্যর্থ হলে
-    // এই ফাংশনটা দিয়ে বুক করা সিটটা ফেরত দেওয়া হবে — নাহলে সিট
-    // "লিক" হয়ে যাবে (বুক আছে কিন্তু কোনো আসল submission নেই)
+    // আপলোড/সেভ ব্যর্থ হলে বুক করা সিট ফেরত দেওয়ার ফাংশন
     const releaseSlotIfClaimed = async ()=>{
       if(slotClaimedAtomically){
+        slotClaimedAtomically = false;
         try{ await sb.rpc('atomic_increment', { p_table:'social_tasks', p_id:taskId, p_field:'current_workers', p_delta:-1 }); }catch(e){}
       }
     };
+    const failAndRelease = async (msg)=>{
+      await stRemoveUploads(uploaded);
+      await releaseSlotIfClaimed();
+      toast(msg,'e');
+      clearBusy();
+    };
 
-// ── Supabase Storage এ photo upload ──────────────
-if(submitBtn) submitBtn.textContent='⏳ Uploading photo...';
-const subId = 'SUB-'+Date.now();
-const storagePath = `${uid}/${subId}.jpg`;
-
-let photoUrl = '';
-try{
-  const {error: upErr} = await sb.storage
-    .from('proofs')
-    .upload(storagePath, file, {upsert: true});
-  if(upErr){
-    await releaseSlotIfClaimed(); // ছবি আপলোড ব্যর্থ হলে বুক করা সিট ফেরত দাও
-    toast(T('photoUploadFailedMsg')+' '+upErr.message,'e');
-    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
-    return;
-  }
-  const {data: urlData} = sb.storage
-    .from('proofs')
-    .getPublicUrl(storagePath);
-  photoUrl = urlData.publicUrl;
-}catch(upErrCatch){
-  await releaseSlotIfClaimed(); // এখানেও একই কারণে সিট ফেরত দাও
-  toast(T('photoUploadFailedMsg')+' '+upErrCatch.message,'e');
-  if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
-  return;
-}
+    // ── Supabase Storage এ প্রতিটা photo upload ────────
+    const subId = 'SUB-'+Date.now();
+    const proofs = [];
+    let firstPhotoUrl = '';
+    for(const c of collected){
+      const label = c.s.label || (c.s.type==='photo' ? 'Screenshot' : 'Text');
+      if(c.file){
+        setBusy('⏳ Uploading photo '+(proofs.filter(p=>p.type==='photo').length+1)+'...');
+        const storagePath = `${uid}/${subId}_${c.i}.jpg`;
+        const {error: upErr} = await sb.storage.from('proofs').upload(storagePath, c.file, {upsert:true});
+        if(upErr){ await failAndRelease(T('photoUploadFailedMsg')+' '+upErr.message); return; }
+        uploaded.push(storagePath);
+        const {data: urlData} = sb.storage.from('proofs').getPublicUrl(storagePath);
+        if(!firstPhotoUrl) firstPhotoUrl = urlData.publicUrl;
+        proofs.push({label, type:'photo', value:urlData.publicUrl});
+      } else {
+        proofs.push({label, type:'text', value:c.text});
+      }
+    }
 
     // ── Supabase এ submission save ───────────────────
-    if(submitBtn) submitBtn.textContent='⏳ Saving...';
-    const { error: subErr } = await sb.from('submissions').upsert({
+    setBusy('⏳ Saving...');
+    const baseRow = {
       id: subId,
       uid: uid,
       task_id: taskId,
-      task_title: taskTitle,
-      reward: parseFloat(reward),
+      task_title: taskData.title,
+      reward: parseFloat(taskData.reward)||0,   // reward সবসময় DB থেকে, ইউজারের পাঠানো মান নয়
       user_email: email,
-      photo_url: photoUrl,   // Firebase Storage URL
+      photo_url: firstPhotoUrl,
       status: 'pending',
       created_at: Date.now()
-    }, {onConflict:'id'});
+    };
+    let { error: subErr } = await sb.from('submissions').upsert({...baseRow, proofs}, {onConflict:'id'});
+    if(subErr && /proofs/i.test(subErr.message||'')){
+      // `proofs` কলাম এখনো নেই (SQL চালানো হয়নি) — শুধু ১টা photo হলে পুরনো পদ্ধতিতে সেভ
+      if(proofs.length===1 && proofs[0].type==='photo'){
+        ({ error: subErr } = await sb.from('submissions').upsert(baseRow, {onConflict:'id'}));
+      } else {
+        await failAndRelease(T('tkNeedSql'));
+        return;
+      }
+    }
     if(subErr){
-      await releaseSlotIfClaimed(); // সাবমিশন সেভই না হলে বুক করা সিট ফেরত দাও
-      toast(T('photoUploadFailedMsg')+' '+subErr.message,'e');
-      if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
+      await failAndRelease(T('photoUploadFailedMsg')+' '+subErr.message);
       return;
     }
 
+    // submission সেভ হয়ে গেছে — এরপর কিছু ব্যর্থ হলেও ছবি/সিট আর ফেরত নেওয়া যাবে না
+    uploaded.length = 0;
+    slotClaimedAtomically = false;
+
     // ── current_workers আপডেট ────────────────────────
     if(maxW > 0){
-      // সীমিত-সিট টাস্ক — উপরের atomic_claim_slot RPC (বা তার fallback)
-      // ইতিমধ্যেই current_workers +1 করে দিয়েছে, এখানে আলাদা করে আবার
-      // বসানোর দরকার নেই। শুধু এখন পুরো ভর্তি হয়ে গেলে টাস্ক disable করো।
       if(newCur >= maxW){
         await sb.from('social_tasks').update({status:'disabled'}).eq('id',taskId);
-        EZCache.invalidate('socialTasks');
       }
     } else {
-      // Unlimited-সিট টাস্ক — কোনো সীমা protect করার দরকার নেই, তাই
-      // এখানে শুধু গণনার জন্য একটা simple increment যথেষ্ট
       const curWUnlimited = parseInt(taskData.current_workers||0);
       await sb.from('social_tasks').update({current_workers: curWUnlimited + 1}).eq('id',taskId);
     }
+    EZCache.invalidate('socialTasks');
 
     // ── Success ──────────────────────────────────────
     showToast(T('proofSubmittedMsg'),'green',4000);
-    // Fix: Cache update + DB save so task disables immediately
     const ct2 = EZCache.get(`completedTasks_${uid}`) || {};
     ct2[taskId] = 'pending';
     EZCache.set(`completedTasks_${uid}`, ct2);
-    // Also persist to Supabase so it survives refresh
-    // ⚠️ ফিক্স: আগে read-modify-write ছিল — ইউজার একের পর এক দ্রুত ২টা
-    // ভিন্ন social task submit করলে একটা 'pending' marker হারিয়ে যেতে
-    // পারত। এখন jsonb_merge_key RPC (একটাই atomic SQL statement) ব্যবহার হচ্ছে।
+    // Supabase এও 'pending' marker — jsonb_merge_key RPC (atomic)
     try{
       const {error:jsonRpcErr} = await sb.rpc('jsonb_merge_key', {
         p_table:'users', p_id:uid, p_field:'completed_tasks', p_key:String(taskId), p_value:'pending'
       });
       if(jsonRpcErr){
-        // ফলব্যাক (RPC না থাকলে)
         const {data:ctRow2} = await sb.from('users').select('completed_tasks').eq('id',uid).maybeSingle();
         const ctDB = ctRow2?.completed_tasks || {};
         ctDB[taskId] = 'pending';
         await sb.from('users').update({completed_tasks: ctDB}).eq('id', uid);
       }
     }catch(e2){}
-    loadSocialTasks();
-    // showInterstitialAd() আগে বানানো ছিল কিন্তু কোথাও কল হচ্ছিল না —
-    // এখানে social task submit সফল হওয়ার পর natural transition point হিসেবে দেখানো হচ্ছে
+    // detail থেকে list এ ফিরে যাও
+    S.socialView = null;
+    render();
+    window.scrollTo(0,0);
+    // social task submit সফল হওয়ার পর natural transition point এ interstitial
     showInterstitialAd();
 
   }catch(e){
+    await stRemoveUploads(uploaded);
+    if(slotClaimedAtomically){
+      try{ await sb.rpc('atomic_increment', { p_table:'social_tasks', p_id:taskId, p_field:'current_workers', p_delta:-1 }); }catch(e3){}
+    }
     toast(T('genericErrorMsg')+' '+e.message,'e');
-    if(submitBtn){ submitBtn.disabled=false; submitBtn.textContent=T('submitProofBtn'); }
+    clearBusy();
   }
 }
 
