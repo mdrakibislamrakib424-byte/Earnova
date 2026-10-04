@@ -5,23 +5,23 @@ function buildReferralPage(){
   return `<div class="ph"><div class="pt">👥 ${T('refCode')||'Referral'}</div>
   <div class="ps">${T('referralPageSub')}</div></div>
 
-  <div style="background:linear-gradient(135deg,#1e40af,#065f46);border-radius:20px;padding:22px 18px;margin-bottom:14px;text-align:center;box-shadow:0 8px 24px rgba(37,99,235,.2)">
-    <div style="font-size:11px;color:rgba(255,255,255,.6);font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">${T('yourRefCodeLabel')}</div>
-    <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;color:#fff;letter-spacing:.2em;margin-bottom:12px">${ud.refCode||'——'}</div>
+  <div class="hx-plate">
+    <div class="hx-plate-lb">${T('yourRefCodeLabel')}</div>
+    <div class="hx-plate-code">${ud.refCode||'——'}</div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button onclick="copyText('${ud.refCode||''}')" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:9px 16px;cursor:pointer;color:#fff;font-size:12px;font-weight:700">${T('copyCodeBtn')}</button>
-      <button onclick="copyText('${refLink}')" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:10px;padding:9px 16px;cursor:pointer;color:#fff;font-size:12px;font-weight:700">${T('copyLinkBtn')}</button>
+      <button class="hx-mbtn" onclick="copyText('${ud.refCode||''}')">${T('copyCodeBtn')}</button>
+      <button class="hx-mbtn" onclick="copyText('${refLink}')">${T('copyLinkBtn')}</button>
     </div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div style="background:linear-gradient(135deg,#10b981 0%,#065f46 100%);box-shadow:0 4px 14px rgba(16,185,129,.35);border-radius:14px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:5px">${T('referralEarnedLabel')}</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff">${fmt$(ud.referralEarned||0)}</div>
+    <div class="hx-stat">
+      <small>${T('referralEarnedLabel')}</small>
+      <b>${fmt$(ud.referralEarned||0)}</b>
     </div>
-    <div style="background:linear-gradient(135deg,#ec4899 0%,#9d174d 100%);box-shadow:0 4px 14px rgba(236,72,153,.35);border-radius:14px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:5px">${T('totalReferredLabel')}</div>
-      <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff">${ud.referralCount||0}</div>
+    <div class="hx-stat g">
+      <small>${T('totalReferredLabel')}</small>
+      <b>${ud.referralCount||0}</b>
     </div>
   </div>
 
@@ -55,30 +55,30 @@ function buildProfile(){
   </div>
 
   <!-- Avatar & Basic Info -->
-  <div class="card profile-avatar-card mb12" style="text-align:center">
-    <div style="width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#2563eb);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:#fff;margin:0 auto 12px;box-shadow:0 0 30px rgba(124,58,237,.3)">${escapeHtml((ud.name||ud.email||'?')[0].toUpperCase())}</div>
-    <div style="font-weight:700;font-size:16px;color:#0f172a">${escapeHtml(ud.name)||'—'}</div>
-    <div style="font-size:13px;color:#64748b;margin-bottom:4px">${escapeHtml(ud.email)||'—'}</div>
+  <div class="card profile-avatar-card hx-steel mb12" style="text-align:center">
+    <div class="hx-av">${escapeHtml((ud.name||ud.email||'?')[0].toUpperCase())}</div>
+    <div style="font-weight:800;font-size:16px;color:#0f172a">${escapeHtml(ud.name)||'—'}</div>
+    <div style="font-size:13px;color:#3b4650;margin-bottom:4px">${escapeHtml(ud.email)||'—'}</div>
     ${ud.isAdmin?`<span class="bdg bdp">⚙️ ${T('profAdminBadge')}</span>`:''}
   </div>
 
   <!-- Stats -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-    <div style="background:linear-gradient(135deg,#10b981 0%,#065f46 100%);box-shadow:0 4px 14px rgba(16,185,129,.35);border-radius:14px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 ${T('profTotalEarned')}</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff">${fmt$(ud.usdEarned||0)}</div>
+    <div class="hx-stat">
+      <small>💰 ${T('profTotalEarned')}</small>
+      <b id="liveStatTotalEarned">${fmt$(ud.usdEarned||0)}</b>
     </div>
-    <div style="background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);box-shadow:0 4px 14px rgba(37,99,235,.35);border-radius:14px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:4px">🎯 ${T('profOffersDone')}</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff">${ud.offersCompleted||0}</div>
+    <div class="hx-stat b">
+      <small>🎯 ${T('profOffersDone')}</small>
+      <b>${ud.offersCompleted||0}</b>
     </div>
-    <div style="background:linear-gradient(135deg,#f59e0b 0%,#b45309 100%);box-shadow:0 4px 14px rgba(245,158,11,.35);border-radius:14px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:4px">📅 ${T('profDaysActive')}</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff">${daysSince}</div>
+    <div class="hx-stat g">
+      <small>📅 ${T('profDaysActive')}</small>
+      <b>${daysSince}</b>
     </div>
-    <div style="background:linear-gradient(135deg,#8b5cf6 0%,#6d28d9 100%);box-shadow:0 4px 14px rgba(139,92,246,.35);border-radius:14px;padding:14px;text-align:center">
-      <div style="font-size:10px;color:rgba(255,255,255,.8);font-weight:700;text-transform:uppercase;margin-bottom:4px">🌍 ${T('profCountry')}</div>
-      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:#fff">${ud.country||S.country||'—'}</div>
+    <div class="hx-stat s">
+      <small>🌍 ${T('profCountry')}</small>
+      <b>${ud.country||S.country||'—'}</b>
     </div>
   </div>
 
