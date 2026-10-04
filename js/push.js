@@ -145,7 +145,7 @@ async function checkBalanceNotification(){
   const lastSent = parseInt(localStorage.getItem(lastKey)||'0');
   if(Date.now() - lastSent < 8*60*60*1000) return; // দিনে সর্বোচ্চ ৩ বার
   const bal = S.userData?.usdEarned||0;
-  const minW = parseFloat(S.siteSettings?.minWithdraw)||10.00;
+  const minW = parseFloat(CFG.minUSD)||12;
   let title='', body='';
   if(bal >= minW){
     title = T('withdrawalReadyTitle');
