@@ -495,7 +495,7 @@ async function attachAuthEvents(){
 function renderApp(){
   if(!S.userData){ $('#app').innerHTML='<div class="ldr"><div class="sp"></div></div>'; return; }
   let html='';
-  html+=buildNav();
+  html+=(S.page==='home')?'':buildNav();  // Home-এ নিজের হেডার আছে (buildHomeHeader)
   html+=`<div class="scr fu" id="scr">`;
   html+=`<div class="ctr" id="pgContent">`;
   // Pages
@@ -755,14 +755,33 @@ async function updateWallCardStatuses(){
 //  HOME PAGE হেডার/কার্ড — নতুন ডিজাইন (রেফারেন্স স্ক্রিনশট অনুযায়ী)
 // ══════════════════════════════════════════════════════════
 function buildHomeHeader(){
+  // Home-এ উপরের সাদা বার (buildNav) দেখানো হয় না — তার কাজ এই হেডারে:
+  //   ☰ মেনু (#navMenu → openSidebar), 🔔 বেল (#hhBell), 🌙 ডার্ক মোড, "R" কার্ড (#navAv → Profile)
+  // id গুলো পুরনো navMenu/navAv-ই রাখা হয়েছে যাতে app-events.js এর বাঁধা হ্যান্ডলার আগের মতোই কাজ করে।
   const ud=S.userData||{};
   const hasNotice=S.noticeQueue.length>0;
-  // ⚠️ ডুপ্লিকেট হেডার ফিক্স: উপরের গ্লোবাল top bar (buildNav)-এ আগে থেকেই
-  // hamburger + লোগো + avatar আছে, তাই এখানে সেগুলো আর দেখানো হচ্ছে না —
-  // শুধু 🔔 বেল আইকন রাখা হলো (এটাই একমাত্র জিনিস যেটা উপরের bar-এ নেই,
-  // Notices পেজে যাওয়ার এই রাস্তাটা যাতে হারিয়ে না যায়)
-  return `<div class="hh-top hh-top-min">
-    <button class="hh-bell${hasNotice?' has-dot':''}" id="hhBell">${NAV_ICONS.bell}${hasNotice?'<span class="hh-dot"></span>':''}</button>
+  const ver=ud.emailVerified===true;
+  const ini=escapeHtml(String((ud.name||ud.email||'?')).trim().charAt(0).toUpperCase()||'?');
+  const icoSun='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+  const icoMoon='<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  const icoMenu='<svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
+  return `<div class="hx-hd">
+    <div class="hx-hd-ctl">
+      <button class="hx-ib" id="navMenu" aria-label="Menu">${icoMenu}</button>
+      <span class="hx-sp"></span>
+      <button class="hx-ib${hasNotice?' has-dot':''}" id="hhBell" aria-label="Notices">${NAV_ICONS.bell}${hasNotice?'<span class="hx-ibdot"></span>':''}</button>
+      <button class="hx-ib" onclick="toggleDarkMode()" title="${T('darkModeTitle')}" aria-label="${T('darkModeTitle')}">${S.darkMode?icoSun:icoMoon}</button>
+    </div>
+    <div class="hx-hd-row">
+      <div class="hx-brand">
+        <div class="hx-plaque"><div class="hx-plaque-in"><img src="icons/hx-logo.png" alt=""><b>${escapeHtml(String(T('appName')).toUpperCase())}</b></div></div>
+        <div class="hx-tag">${T('hxTagline')}</div>
+      </div>
+      <button class="hx-vcard${ver?'':' no'}" id="navAv" aria-label="${T('pr')}">
+        <div class="hx-av2">${ini}</div>
+        <div class="hx-vtx"><b><i>${ver?'✓':'!'}</i>${ver?T('hxVerified'):T('hxNotVerified')}</b><span>${ver?T('hxEmailVer'):T('hxEmailNotVer')}</span></div>
+      </button>
+    </div>
   </div>`;
 }
 
@@ -825,7 +844,7 @@ function buildCommunityNews(){
 // ══════════════════════════════════════════════════════════
 function hxMoney(v,d){ d=(d==null)?2:d; return '$'+(parseFloat(v)||0).toFixed(d); }
 function hxFill(s,o){ return String(s).replace(/%([a-z])/g,(m,k)=>(o[k]!=null?o[k]:m)); }
-function hxMinW(){ return parseFloat(CFG.minUSD)||5; }
+function hxMinW(){ return parseFloat(CFG.minUSD)||12; }
 function hxTodayEarn(ud){ return (ud&&ud.todayDate===new Date().toDateString())?(ud.todayEarned||0):0; }
 
 function hxChartSvg(){
