@@ -527,6 +527,7 @@ function renderApp(){
   html+=buildBottomNav();
   $('#app').innerHTML=html;
   attachAppEvents();
+  if(S.page==='home' && typeof hxInitHome==='function') hxInitHome();
   // Auto-load page data
   if(S.page==='social') loadSocialTasks();
   if(S.page==='offers') updateWallCardStatuses();
@@ -762,8 +763,7 @@ function buildHomeHeader(){
   // Notices পেজে যাওয়ার এই রাস্তাটা যাতে হারিয়ে না যায়)
   return `<div class="hh-top hh-top-min">
     <button class="hh-bell${hasNotice?' has-dot':''}" id="hhBell">${NAV_ICONS.bell}${hasNotice?'<span class="hh-dot"></span>':''}</button>
-  </div>
-  <div class="hh-welcome">${T('welcomeToWord')} ${T('appName')}, ${escapeHtml(ud.name||ud.email?.split('@')[0]||'User')}!</div>`;
+  </div>`;
 }
 
 function buildQuickActions(){
@@ -819,6 +819,255 @@ function buildCommunityNews(){
   </div>`;
 }
 
+// ══════════════════════════════════════════════════════════
+//  HOME HERO — নতুন প্রফেশনাল ডিজাইন (রুপালি প্যানেল + নেভি কার্ড + ধাতব Withdraw বার)
+//  সব সংখ্যা আসল ডেটা থেকে আসে। চার্ট/হিটম্যাপ ফোনে সেভ থাকা সাম্প্রতিক আয়ের লগ (getActivityLog) থেকে আঁকা হয়।
+// ══════════════════════════════════════════════════════════
+function hxMoney(v,d){ d=(d==null)?2:d; return '$'+(parseFloat(v)||0).toFixed(d); }
+function hxFill(s,o){ return String(s).replace(/%([a-z])/g,(m,k)=>(o[k]!=null?o[k]:m)); }
+function hxMinW(){ return parseFloat(CFG.minUSD)||5; }
+function hxTodayEarn(ud){ return (ud&&ud.todayDate===new Date().toDateString())?(ud.todayEarned||0):0; }
+
+function hxChartSvg(){
+  const log=(typeof getActivityLog==='function'?getActivityLog():[]);
+  const d0=new Date(); d0.setHours(0,0,0,0);
+  const sums=[0,0,0,0,0,0,0], labels=[];
+  for(let i=0;i<7;i++){
+    const st=d0.getTime()-(6-i)*86400000;
+    labels.push(new Date(st).toLocaleDateString(undefined,{weekday:'short'}));
+    log.forEach(a=>{ if(a.amount>0 && a.t>=st && a.t<st+86400000) sums[i]+=a.amount; });
+  }
+  const cum=[]; sums.reduce((c,v,i)=>(cum[i]=c+v),0);
+  const mx=Math.max(...sums), mc=Math.max(...cum);
+  const X=i=>(4+i*(104/6)).toFixed(1);
+  const Y1=v=>(mx>0?62-(v/mx)*52:62).toFixed(1);
+  const Y2=v=>(mc>0?62-(v/mc)*40:62).toFixed(1);
+  const p1=sums.map((v,i)=>X(i)+' '+Y1(v)), p2=cum.map((v,i)=>X(i)+' '+Y2(v));
+  const pk=mx>0?sums.indexOf(mx):-1;
+  return `<svg viewBox="0 0 112 76" role="img" aria-label="7 days">
+    <defs><linearGradient id="hxga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1fd5b3" stop-opacity=".45"/><stop offset="1" stop-color="#1fd5b3" stop-opacity="0"/></linearGradient></defs>
+    <path class="hx-ar" d="M${p1.join(' L')} L108 66 L4 66Z" fill="url(#hxga)"/>
+    <path class="hx-ln1" pathLength="1" d="M${p1.join(' L')}" fill="none" stroke="#25e0bd" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <path class="hx-ln2" pathLength="1" d="M${p2.join(' L')}" fill="none" stroke="#e8b84a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pk>=0?`<circle class="hx-dot" cx="${X(pk)}" cy="${Y1(sums[pk])}" r="3" fill="#0b1c30" stroke="#25e0bd" stroke-width="1.6"/>`:''}
+    ${mc>0?`<circle class="hx-dot" cx="108" cy="${Y2(cum[6])}" r="2.6" fill="#0b1c30" stroke="#e8b84a" stroke-width="1.5"/>`:''}
+    <g fill="#7f90a6" font-size="6" font-family="DM Sans,sans-serif" text-anchor="middle"><text x="${X(0)}" y="74">${labels[0]}</text><text x="${X(2)}" y="74">${labels[2]}</text><text x="${X(4)}" y="74">${labels[4]}</text><text x="${X(6)}" y="74">${labels[6]}</text></g>
+  </svg>`;
+}
+
+function hxHeatHtml(){
+  // ৩২টি ঘর × ৪৫ মিনিট = গত ২৪ ঘণ্টা; সোনালি ঘর = ওই সময়ে আয় হয়েছে (উজ্জ্বলতা = পরিমাণ)
+  const log=(typeof getActivityLog==='function'?getActivityLog():[]);
+  const now=Date.now(), B=45*60000, cells=new Array(32).fill(0);
+  log.forEach(a=>{ if(a.amount>0){ const k=Math.floor((now-a.t)/B); if(k>=0&&k<32) cells[31-k]+=a.amount; } });
+  const mx=Math.max(...cells);
+  return cells.map((v,i)=>{
+    if(v>0){ const o=(0.55+0.45*(v/mx)).toFixed(2); return `<i style="background:#f0c768;opacity:${o}"></i>`; }
+    return `<i style="background:${(i+Math.floor(i/8))%2?'#14907f':'#0f7f78'};opacity:.5"></i>`;
+  }).join('');
+}
+
+function hxBuildHero(){
+  const ud=S.userData||{};
+  const bal=ud.usdEarned||0, td=hxTodayEarn(ud), m=hxMinW();
+  const lv=getUserLevel(bal);
+  const nm=escapeHtml(ud.name||(ud.email||'').split('@')[0]||'User');
+  const dt=new Date().toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+  const pct=Math.max(0.015,Math.min(1,bal/m));
+  const ready=bal>=m;
+  return `<div class="hx-wrap">
+  <div class="hx-sv">
+    <div class="hx-wb">
+      <div class="hx-wb-l">
+        <small>${T('hxWelcomeBack')}</small>
+        <div class="hx-nm">${nm}</div>
+        <div class="hx-tier">${T('hxTier')}: ${lv.name} ${T('hxMember')}</div>
+      </div>
+      <div class="hx-pill">
+        <small>${T('hxTotalBal')}</small>
+        <b id="liveHeroPill">${hxMoney(bal)}</b><br>
+        <span class="hx-chip">${T('hxToday')} +<span id="liveHeroChip">${hxMoney(td,4)}</span></span>
+      </div>
+    </div>
+    <div class="hx-upd">${T('hxLastUpd')}: ${dt}</div>
+
+    <div class="hx-nv hx-ring">
+      <div class="hx-top">
+        <div class="hx-chart">${hxChartSvg()}</div>
+        <div class="hx-big">
+          <div class="hx-amt" id="liveHeroBal">${hxMoney(bal)}</div>
+          <div class="hx-lb">${T('hxVerBal')}</div>
+          <div class="hx-sub">${hxFill(T('hxBasedOn'),{n:ud.offersCompleted||0})}<br>${hxFill(T('hxRatePer'),{r:hxMoney(S.countryEarn)})}</div>
+        </div>
+        <div class="hx-coinbox"><span class="hx-cglow"></span><div class="hx-cfloat"><div class="hx-coin"><i class="hx-e" style="transform:translateZ(-2px)"></i><i class="hx-e" style="transform:translateZ(-1px)"></i><i class="hx-e" style="transform:translateZ(0px)"></i><i class="hx-e" style="transform:translateZ(1px)"></i><i class="hx-e" style="transform:translateZ(2px)"></i><img class="hx-f" alt="" src="icons/hx-coin.webp"><img class="hx-b" alt="" src="icons/hx-coin.webp"></div></div></div>
+      </div>
+
+      <div class="hx-rate"><span>${T('hxBaseRate')}</span><b>${hxMoney(S.countryEarn)} USD (${S.country||'…'})</b></div>
+
+      <div class="hx-tri">
+        <div class="hx-bx">
+          <h4>${T('hxTaskPerf')}</h4>
+          <div class="hx-vis"><img class="hx-bars3d" alt="" src="icons/hx-bars.webp"></div>
+          <p class="hx-hl">${T('hxCompleted')} <b id="liveHeroOffers">${ud.offersCompleted||0}</b></p>
+          <p>${T('hxStreakW')} <b>${ud.loginStreak||0}</b> ${T('daysWord')}</p>
+        </div>
+        <div class="hx-bx">
+          <h4>${T('hxNetwork')}</h4>
+          <div class="hx-vis"><div class="hx-map" style="background-image:url(icons/hx-map.jpg)"></div></div>
+          <p class="hx-hl">${T('hxVerRefs')} <b id="liveHeroRefs">${ud.activeReferrals||0}</b></p>
+          <p>${T('hxTotalRef')} <b>${ud.referralCount||0}</b></p>
+        </div>
+        <div class="hx-bx">
+          <h4>${T('hxGains')}</h4>
+          <div class="hx-vis"><div class="hx-heat" id="hxHeat">${hxHeatHtml()}</div></div>
+          <div class="hx-gain" id="liveHeroToday">${hxMoney(td,4)}</div>
+          <p>${T('hxTodayEarned')}<br>${T('hxLast24')}</p>
+        </div>
+      </div>
+
+      <div class="hx-note">${T('hxNote')}</div>
+
+      <div class="hx-prog${ready?' hx-ok':''}" id="hxProg"><div class="hx-prog-l"><span id="liveHeroProgText">${hxFill(T('hxOf'),{a:hxMoney(bal),b:hxMoney(m)})}</span><b id="liveHeroProgLeft">${ready?T('hxReady'):hxFill(T('hxToGo'),{a:hxMoney(m-bal)})}</b></div><div class="hx-prog-t"><i id="hxProgF" style="transform:scaleX(${pct.toFixed(3)})"></i></div></div>
+      <div class="hx-wd${ready?' hx-ready':''}" id="hxWd" role="button" tabindex="0" data-page="wallet">
+        <div class="hx-kn hx-l"></div><i class="hx-rg"></i>
+        <div class="hx-st"><b>${T('withdrawWord')}<i>›</i></b><span>${hxFill(T('hxMinW'),{m:hxMoney(m)})}</span></div>
+        <i class="hx-rg"></i><div class="hx-kn hx-r"></div><i class="hx-rg"></i>
+        <div class="hx-lock"><div class="hx-lock-in">
+          <svg viewBox="0 0 24 24" fill="none"><path class="hx-sh" d="M8 11V8a4 4 0 0 1 8 0v3" stroke="#3df0cc" stroke-width="2.4" stroke-linecap="round"/><rect class="hx-bd" x="5" y="10.5" width="14" height="10.5" rx="2.4" fill="#3df0cc"/><circle cx="12" cy="15.2" r="1.5" fill="#062a2e"/><rect x="11.2" y="15.5" width="1.6" height="3.2" rx=".8" fill="#062a2e"/></svg>
+        </div></div>
+      </div>
+    </div>
+  </div>
+  </div>`;
+}
+
+// লাইভ আপডেট (পুরো পেজ আবার না এঁকে) — db.js এর updateNavBar() এটা ডাকে
+function hxRefreshHero(){
+  const ud=S.userData, wd=document.getElementById('hxWd');
+  if(!ud||!wd) return;
+  const g=id=>document.getElementById(id), set=(id,v)=>{ const e=g(id); if(e) e.textContent=v; };
+  const bal=ud.usdEarned||0, td=hxTodayEarn(ud), m=hxMinW(), ready=bal>=m;
+  if(!window._hxCounting){ set('liveHeroBal',hxMoney(bal)); set('liveHeroPill',hxMoney(bal)); }
+  set('liveHeroChip',hxMoney(td,4)); set('liveHeroToday',hxMoney(td,4));
+  set('liveHeroOffers',ud.offersCompleted||0); set('liveHeroRefs',ud.activeReferrals||0);
+  set('liveHeroProgText',hxFill(T('hxOf'),{a:hxMoney(bal),b:hxMoney(m)}));
+  set('liveHeroProgLeft',ready?T('hxReady'):hxFill(T('hxToGo'),{a:hxMoney(m-bal)}));
+  const f=g('hxProgF'); if(f) f.style.transform='scaleX('+Math.max(0.015,Math.min(1,bal/m)).toFixed(3)+')';
+  const was=wd.classList.contains('hx-ready');
+  wd.classList.toggle('hx-ready',ready);
+  const pg=g('hxProg'); if(pg) pg.classList.toggle('hx-ok',ready);
+  if(ready&&!was){ hxBurst(); try{ toast(T('hxReady'),'s'); }catch(e){} }
+}
+
+const HX_CAN_ANIM = !!(Element.prototype.animate) && !(window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches);
+
+function hxBurst(){
+  if(!HX_CAN_ANIM) return;
+  const li=document.querySelector('.hx-lock-in'); if(!li) return;
+  const r=li.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  for(let i=0;i<14;i++){
+    const s=document.createElement('i'); s.className='hx-spark';
+    s.style.background=['#fff6c8','#f0c768','#7dffd0','#ffb347','#18c9a6','#fff'][i%6];
+    s.style.left=cx+'px'; s.style.top=cy+'px'; document.body.appendChild(s);
+    const a=Math.PI*2*i/14+Math.random()*.4, d=34+Math.random()*34;
+    s.animate([{transform:'translate(-50%,-50%) scale(1)',opacity:1},
+      {transform:`translate(calc(-50% + ${Math.cos(a)*d}px),calc(-50% + ${Math.sin(a)*d-14}px)) scale(.2)`,opacity:0}],
+      {duration:700+Math.random()*300,easing:'cubic-bezier(.2,.8,.3,1)'}).onfinish=()=>s.remove();
+  }
+}
+
+// কয়েনের ঝাঁক — কার্ডের কয়েন থেকে ছোট কয়েন ছিটকে মিলিয়ে যায়
+function hxCoinShower(force){
+  if(!HX_CAN_ANIM || document.hidden) return;
+  const box=document.querySelector('.hx-coinbox'); if(!box) return;
+  let layer=document.getElementById('hxFx');
+  if(!layer){ layer=document.createElement('div'); layer.id='hxFx'; layer.className='hx-fx'; layer.setAttribute('aria-hidden','true'); document.body.appendChild(layer); }
+  if(layer.childElementCount>44) return;
+  if(!force && Date.now()-(window._hxTouch||0)<1500) return;
+  const r=box.getBoundingClientRect(), o={x:r.left+r.width/2,y:r.top+r.height/2};
+  const W=innerWidth,H=innerHeight, rnd=(a,b)=>a+Math.random()*(b-a);
+  const n=Math.round(((navigator.hardwareConcurrency||8)<=4?12:22)*(force?1.5:1));
+  for(let i=0;i<n;i++){
+    const im=new Image(), size=rnd(11,22);
+    im.src='icons/hx-coin-s.webp'; im.alt=''; im.className='hx-fxi'; im.style.width=size+'px';
+    im.style.left=(o.x-size/2)+'px'; im.style.top=(o.y-size/2)+'px'; layer.appendChild(im);
+    const ang=rnd(0,Math.PI*2), bst=rnd(30,90), bx=Math.cos(ang)*bst, by=Math.sin(ang)*bst-rnd(10,40);
+    const tx=rnd(.04,.96)*W-o.x, ty=rnd(.04,.96)*H-o.y, s1=rnd(1,1.3), s2=rnd(1.1,1.9);
+    const sp=(Math.round(rnd(1,3))*360+rnd(0,180))*(Math.random()<.5?1:-1), rz=rnd(-35,35);
+    im.animate([
+      {transform:'translate(0,0) rotateY(0deg) rotateZ(0deg) scale(.2)',opacity:0,offset:0,easing:'cubic-bezier(.15,.9,.3,1)'},
+      {transform:`translate(${bx}px,${by}px) rotateY(${sp*.35}deg) rotateZ(${rz*.5}deg) scale(${s1})`,opacity:.9,offset:.16,easing:'cubic-bezier(.4,0,.6,1)'},
+      {transform:`translate(${tx}px,${ty}px) rotateY(${sp}deg) rotateZ(${rz}deg) scale(${s2})`,opacity:.8,offset:.7,easing:'ease-in'},
+      {transform:`translate(${tx*1.06}px,${ty*1.06}px) rotateY(${sp*1.1}deg) rotateZ(${rz}deg) scale(${s2*1.1})`,opacity:0,offset:1}
+    ],{duration:rnd(3200,5200),delay:i*45,fill:'both'}).onfinish=()=>im.remove();
+  }
+}
+
+// প্রথমবার হোম খোলার সময় ব্যালেন্স ০ থেকে গুনে ওঠে
+function hxCountUp(){
+  const ud=S.userData; if(!ud||!HX_CAN_ANIM||window._hxCounted) return;
+  window._hxCounted=true;
+  const to=ud.usdEarned||0; if(to<=0) return;
+  const a=document.getElementById('liveHeroBal'), b=document.getElementById('liveHeroPill');
+  window._hxCounting=true; const t0=performance.now();
+  (function step(n){
+    const p=Math.min(1,(n-t0)/1000), v=to*(1-Math.pow(1-p,3));
+    if(!document.getElementById('liveHeroBal')){ window._hxCounting=false; return; }
+    document.getElementById('liveHeroBal').textContent=hxMoney(v);
+    const pl=document.getElementById('liveHeroPill'); if(pl) pl.textContent=hxMoney(v);
+    if(p<1) requestAnimationFrame(step); else { window._hxCounting=false; hxRefreshHero(); }
+  })(t0);
+}
+
+// কাত করলে ধাতব আভা + আঙুল রাখলে হালকা ৩D হেলা (একবারই বাঁধা হয়)
+function hxBindOnce(){
+  if(window._hxBound) return; window._hxBound=true;
+  const SEL='.hx-bx,.hx-pill,.hx-nv', root=document.documentElement;
+  let cur=null, pressed=false, raf=0;
+  const light=(x,y)=>{ if(raf) return; raf=requestAnimationFrame(()=>{ raf=0; root.style.setProperty('--hmx',x.toFixed(1)); root.style.setProperty('--hmy',y.toFixed(1)); }); };
+  const clear=e=>{ if(!e) return; e.classList.remove('hx-on'); ['--hrx','--hry','--hmx','--hmy'].forEach(k=>e.style.removeProperty(k)); };
+  const apply=(e,x,y)=>{
+    const r=e.getBoundingClientRect(), px=Math.max(0,Math.min(1,(x-r.left)/r.width)), py=Math.max(0,Math.min(1,(y-r.top)/r.height));
+    const k=e.classList.contains('hx-nv')?5:11;
+    e.classList.add('hx-on');
+    e.style.setProperty('--hry',((px-.5)*k*2).toFixed(2)+'deg'); e.style.setProperty('--hrx',(-(py-.5)*k*2).toFixed(2)+'deg');
+    e.style.setProperty('--hmx',(px*100).toFixed(1)); e.style.setProperty('--hmy',(py*100).toFixed(1));
+  };
+  const hit=ev=>{
+    if(!pressed) return;
+    const e=ev.target.closest&&ev.target.closest(SEL);
+    if(e!==cur){ clear(cur); cur=e; }
+    if(cur) apply(cur,ev.clientX,ev.clientY);
+  };
+  document.addEventListener('pointerdown',ev=>{ window._hxTouch=Date.now(); pressed=true; hit(ev);
+    const w=ev.target.closest&&ev.target.closest('.hx-wd');
+    if(w){ w.classList.add('hx-down'); hxRipple(w,ev); if(navigator.vibrate) navigator.vibrate(12); }
+    if(ev.target.closest&&ev.target.closest('.hx-coinbox')) hxCoinShower(true);
+  },{passive:true});
+  document.addEventListener('pointermove',hit,{passive:true});
+  ['pointerup','pointercancel'].forEach(n=>document.addEventListener(n,()=>{ pressed=false; clear(cur); cur=null; const w=document.querySelector('.hx-wd'); if(w) w.classList.remove('hx-down'); },{passive:true}));
+  ['scroll','touchmove'].forEach(n=>addEventListener(n,()=>{ window._hxTouch=Date.now(); },{passive:true,capture:true}));
+  if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission!=='function'){
+    addEventListener('deviceorientation',e=>{
+      if(e.gamma==null||!document.querySelector('.hx-wrap')) return;
+      const g=Math.max(-30,Math.min(30,e.gamma)), b=Math.max(-25,Math.min(25,(e.beta||45)-45));
+      light(50+g/30*50,30+b/25*40);
+    });
+  }
+  (function loop(first){ setTimeout(()=>{ hxCoinShower(false); loop(); }, first||(22000+Math.random()*12000)); })(4000);
+}
+function hxRipple(w,ev){
+  if(!HX_CAN_ANIM) return;
+  const r=w.getBoundingClientRect(), s=document.createElement('i'); s.className='hx-rip';
+  s.style.left=(ev.clientX-r.left)+'px'; s.style.top=(ev.clientY-r.top)+'px'; w.appendChild(s);
+  s.animate([{transform:'translate(-50%,-50%) scale(0)',opacity:.45},{transform:'translate(-50%,-50%) scale(1)',opacity:0}],{duration:520,easing:'ease-out'}).onfinish=()=>s.remove();
+}
+function hxInitHome(){
+  if(!document.querySelector('.hx-wrap')) return;
+  hxBindOnce();
+  hxCountUp();
+}
+
 function buildHome(){
   const ud=S.userData||{};
   const today=new Date().toDateString();
@@ -826,32 +1075,7 @@ function buildHome(){
   return `<div class="home-top-glow">
   ${buildHomeHeader()}
   </div>
-  <div class="hero hero-grad">
-    <div style="font-size:11px;color:rgba(255,255,255,.75);font-weight:600;text-transform:uppercase;letter-spacing:.09em">${T('yourEarningsLabel')}</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px">
-      <div class="sf" style="font-size:34px;font-weight:800;color:#fff" id="liveHeroBal">${fmt$(ud.usdEarned||0)}</div>
-      <div class="hero-coin">$</div>
-    </div>
-    <div style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px">${T('rateLabel')} ${fmt$(S.countryEarn)} ${T('perOfferWord')} · ${S.country||'Detecting…'}</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
-      <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 4px;text-align:center">
-        <div style="font-size:16px;line-height:1">✅</div>
-        <div class="sf" id="liveHeroOffers" style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;line-height:1.1">${ud.offersCompleted||0}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;line-height:1.2">${T('oc')}</div>
-      </div>
-      <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 4px;text-align:center">
-        <div style="font-size:16px;line-height:1">👥</div>
-        <div class="sf" id="liveHeroRefs" style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;line-height:1.1">${ud.activeReferrals||0}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;line-height:1.2">${T('refCount')}</div>
-      </div>
-      <div style="background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:9px 4px;text-align:center">
-        <div style="font-size:16px;line-height:1">💵</div>
-        <div class="sf" id="liveHeroToday" style="font-size:15px;font-weight:800;color:#fff;margin-top:4px;line-height:1.1">${fmt$(todayEarn)}</div>
-        <div style="font-size:10px;color:rgba(255,255,255,.75);margin-top:2px;line-height:1.2">${T('todayEarn')}</div>
-      </div>
-    </div>
-    <button class="btn hero-withdraw-btn" data-page="wallet">${T('withdrawWord')} <span class="hwb-chev">›</span></button>
-  </div>
+  ${hxBuildHero()}
 
   ${buildQuickActions()}
   ${buildRecentActivities()}
