@@ -187,7 +187,7 @@ const LANGS={
     communityNewsTitle:'Community News',noCommunityVideoMsg:'No video added yet',
     dailyBonusAutoTitle:' Daily Bonus',dailyBonusClaimedTodayMsg:'Today\'s daily bonus has already been added automatically!',
     dailyBonusAutoInfoMsg:'Daily bonus is added automatically every time you open the app  no manual claim needed.',
-    withdrawWord:'Withdraw',activityEarnedWord:'Earned',activityDeductedWord:'Withdrawn',welcomeToWord:'Welcome to',
+    withdrawWord:'Withdraw',activityEarnedWord:'Earned',activityDeductedWord:'Withdrawn',welcomeToWord:'Welcome to',hxWelcomeBack:'Welcome Back',hxTier:'Current tier',hxMember:'Member',hxTotalBal:'Total Balance',hxLastUpd:'Last update',hxVerBal:'Verified Total Balance',hxBasedOn:'Based on %n completed offers.',hxRatePer:'Rate: %r per offer',hxBaseRate:'Base Rate per Offer:',hxTaskPerf:'Task Performance',hxNetwork:'Qualified Network',hxGains:'Real-Time Gains (24h)',hxCompleted:'Completed Offers:',hxStreakW:'Login Streak:',hxVerRefs:'Verified Referrals:',hxTotalRef:'Total Referred:',hxTodayEarned:'Today Earned',hxLast24:'Last 24 Hours',hxNote:'Your balance updates automatically after every approved task.',hxOf:'%a of %b',hxToGo:'%a to go',hxReady:'Ready to withdraw',hxMinW:'Minimum Withdrawal: %m USD',hxToday:'Today',hxLocked:'Withdrawals open at %m',
     spinPageTitle:'Daily Spin Wheel',spinPageSub:'Spin once a day for a free bonus!',
   }},
   bn:{n:'বাংলা',f:'🇧🇩',d:'ltr',t:{
@@ -355,7 +355,7 @@ const LANGS={
     communityNewsTitle:'কমিউনিটি নিউজ',noCommunityVideoMsg:'এখনো কোনো ভিডিও যোগ করা হয়নি',
     dailyBonusAutoTitle:'🎁 ডেইলি বোনাস',dailyBonusClaimedTodayMsg:'আজকের ডেইলি বোনাস স্বয়ংক্রিয়ভাবে যোগ হয়ে গেছে!',
     dailyBonusAutoInfoMsg:'অ্যাপ খোলার সাথে সাথে ডেইলি বোনাস স্বয়ংক্রিয়ভাবে যোগ হয়ে যায় — নিজে থেকে নেওয়ার দরকার নেই।',
-    withdrawWord:'উইথড্র',activityEarnedWord:'আয় হয়েছে',activityDeductedWord:'উইথড্র করা হয়েছে',welcomeToWord:'স্বাগতম',
+    withdrawWord:'উইথড্র',activityEarnedWord:'আয় হয়েছে',activityDeductedWord:'উইথড্র করা হয়েছে',welcomeToWord:'স্বাগতম',hxWelcomeBack:'আবার স্বাগতম',hxTier:'বর্তমান লেভেল',hxMember:'মেম্বার',hxTotalBal:'মোট ব্যালেন্স',hxLastUpd:'সর্বশেষ আপডেট',hxVerBal:'যাচাইকৃত মোট ব্যালেন্স',hxBasedOn:'%n টি সম্পন্ন অফারের ভিত্তিতে।',hxRatePer:'রেট: প্রতি অফারে %r',hxBaseRate:'প্রতি অফারের বেস রেট:',hxTaskPerf:'টাস্ক পারফরমেন্স',hxNetwork:'রেফারেল নেটওয়ার্ক',hxGains:'রিয়েল-টাইম আয় (২৪ ঘণ্টা)',hxCompleted:'সম্পন্ন অফার:',hxStreakW:'লগইন স্ট্রিক:',hxVerRefs:'সক্রিয় রেফারেল:',hxTotalRef:'মোট রেফার:',hxTodayEarned:'আজকের আয়',hxLast24:'গত ২৪ ঘণ্টা',hxNote:'প্রতিটি অনুমোদিত টাস্কের পর আপনার ব্যালেন্স নিজে থেকেই আপডেট হয়।',hxOf:'%b এর মধ্যে %a',hxToGo:'আর %a বাকি',hxReady:'উইথড্র করার জন্য প্রস্তুত',hxMinW:'সর্বনিম্ন উইথড্র: %m USD',hxToday:'আজ',hxLocked:'%m হলে উইথড্র খুলবে',
     spinPageTitle:'ডেইলি স্পিন হুইল',spinPageSub:'প্রতিদিন একবার স্পিন করে ফ্রি বোনাস জিতুন!',
   }},
   ur:{n:'اردو',f:'🇵🇰',d:'rtl',t:{
