@@ -887,7 +887,7 @@ async function submitTaskProof(taskId){
 function buildFAQ(){
   const faqs=[
     {q:'How do I earn money on EARNOVA?',a:'You can earn by completing CPA offers, watching ads, completing surveys, installing apps, and referring friends. Each completed task credits your account balance.'},
-    {q:'What is the minimum withdrawal amount?',a:'The minimum withdrawal amount is $5.00 USD. You also need at least 5 active referrals to unlock withdrawals.'},
+    {q:'What is the minimum withdrawal amount?',a:'The minimum withdrawal amount is $12.00 USD. You also need at least 5 active referrals to unlock withdrawals.'},
     {q:'How long does withdrawal take?',a:'Withdrawals are processed within 3–7 business days. Once approved by admin, payment is sent to your chosen method (bKash, Nagad, PayPal, USDT, etc.).'},
     {q:'What payment methods are supported?',a:'We support bKash, Nagad, PayPal, Visa/Mastercard, Payoneer, and USDT (TRC20). Select your preferred method during withdrawal.'},
     {q:'How does the referral system work?',a:'Share your unique referral code with friends. When they sign up and become active users (watch at least 1 ad), they count as your active referrals. You earn a bonus for each referral.'},
