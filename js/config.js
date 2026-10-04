@@ -335,7 +335,7 @@ const CFG = {
     { amount:0.20, weight:2,  color:'#a78bfa' },
     { amount:0.50, weight:1,  color:'#fb923c' },
   ],
-  get minUSD(){ return parseInt(localStorage.getItem('ez_minUSD')||'5'); },
+  get minUSD(){ return parseInt(localStorage.getItem('ez_minUSD')||'12'); },
   get minRefs(){ return parseInt(localStorage.getItem('ez_minRefs')||'5'); },
   maxDevAcc:2,
   // 🪪 এই পরিমাণের বেশি withdraw করতে গেলে KYC (identity verification)
