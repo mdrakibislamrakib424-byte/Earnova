@@ -596,7 +596,7 @@ async function loadAdminSettings(c){
   };
   $('#saveMode').onclick=async()=>{
     // minUSD এবং minRefs save করো
-    const newMinUSD = parseInt(document.getElementById('adminMinUSD')?.value||'5');
+    const newMinUSD = parseInt(document.getElementById('adminMinUSD')?.value||'12');
     const newMinRefs = parseInt(document.getElementById('adminMinRefs')?.value||'5');
     if(newMinUSD>0) localStorage.setItem('ez_minUSD', newMinUSD);
     if(newMinRefs>=0) localStorage.setItem('ez_minRefs', newMinRefs);
@@ -665,7 +665,7 @@ function startLiveTicker(){
     '👥 Refer friends and unlock withdrawals faster!',
     '🎯 New offers available — Complete tasks and earn today!',
     '🔒 Secure & trusted platform — 150+ countries supported',
-    '💸 Minimum withdrawal just $5 — Fast payments guaranteed!',
+    '💸 Minimum withdrawal just $12 — Fast payments guaranteed!',
   ];
   let i=0;
   setInterval(()=>{
