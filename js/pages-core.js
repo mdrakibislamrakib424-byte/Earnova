@@ -541,23 +541,21 @@ function buildNav(){
   // "[object Object]" দেখাত। এখন শুধু আসল string থাকলেই ব্যানার দেখাবে, নাহলে চুপচাপ hide।
   const rawAnnouncement = S.siteSettings?.announcement;
   const announcement = (typeof rawAnnouncement==='string') ? rawAnnouncement.trim() : '';
-  const onlineCount = S.realUserCount || '…';
-  const icoSun='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
+    const icoSun='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>';
   const icoMoon='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+  // সব পেজের জন্য একই sticky হেডার (Home বাদে — Home-এর নিজের বড় হেডার buildHomeHeader)
+  // id/class আগের মতোই রাখা: #navMenu → openSidebar, #navAv → Profile, .nav-bal / .nav-nd → updateNavBar() আপডেট করে
+  const icoMenu='<svg width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg>';
+  const ini=escapeHtml(String((ud.name||ud.email||'?')).trim().charAt(0).toUpperCase()||'?');
   return `
-  ${announcement?`<div style="background:linear-gradient(90deg,#1e40af,#065f46);color:#fff;font-size:11px;font-weight:600;padding:7px 16px;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a2 2 0 1 1-3.2 2.4"/></svg> ${announcement} <button onclick="this.parentElement.style.display='none'" style="background:none;border:none;color:rgba(255,255,255,.6);cursor:pointer;font-size:14px;margin-left:8px">✕</button></div>`:''}
-  <nav class="nav">
-  <button class="nav-mn" id="navMenu"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/></svg></button>
-  <div class="nav-bnd" id="navBrand">◆ ${T('appName')}</div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <div style="display:flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#059669"><div style="width:6px;height:6px;border-radius:50%;background:#22c55e;animation:blink 1.5s infinite"></div><span id="navOnlineCount">${onlineCount}</span></div>
-    <div class="nav-bal" id="navBal">${fmt$(ud.usdEarned||0)}</div>
-  </div>
-  <button onclick="toggleDarkMode()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;padding:4px 6px" title="${T('darkModeTitle')}">${S.darkMode?icoSun:icoMoon}</button>
-  <button class="nav-av${hasNotice?' nb-dot':''}" id="navAv">
-    ${escapeHtml((ud.name||ud.email||'?')[0].toUpperCase())}
-    ${hasNotice?'<div class="nav-nd"></div>':''}
-  </button>
+  ${announcement?`<div class="hx-ann"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a2 2 0 1 1-3.2 2.4"/></svg><span>${escapeHtml(announcement)}</span><button onclick="this.parentElement.style.display='none'" aria-label="Close">✕</button></div>`:''}
+  <nav class="hx-nav">
+    <button class="hx-ib" id="navMenu" aria-label="Menu">${icoMenu}</button>
+    <div class="hx-plaque hx-sm" id="navBrand"><div class="hx-plaque-in"><img src="icons/hx-logo.png" alt=""><b>${escapeHtml(String(T('appName')).toUpperCase())}</b></div></div>
+    <span class="hx-sp"></span>
+    <div class="hx-bpill"><small>${T('hxTotalBal')}</small><b class="nav-bal" id="navBal">${fmt$(ud.usdEarned||0)}</b></div>
+    <button class="hx-ib" onclick="toggleDarkMode()" title="${T('darkModeTitle')}" aria-label="${T('darkModeTitle')}">${S.darkMode?icoSun:icoMoon}</button>
+    <button class="hx-av2 hx-navav" id="navAv" aria-label="${T('pr')}">${ini}${hasNotice?'<div class="nav-nd"></div>':''}</button>
   </nav>`;
 }
 
@@ -1198,17 +1196,12 @@ function buildWallet(){
   const methods=getMethodsForCountry();
   const isBD=(S.country||'').toUpperCase()==='BD';
   return `<div class="ph"><div class="pt">${T('wt')}</div><div class="ps">${T('mw')}</div></div>
-  <div class="card" style="text-align:center;background:linear-gradient(135deg,#1e40af,#065f46);border-color:rgba(37,99,235,.3);margin-bottom:14px">
-    <div style="font-size:13px;color:rgba(255,255,255,.7);margin-bottom:6px">${T('bal')}</div>
-    <div class="sf" style="font-size:40px;font-weight:800;color:#fbbf24">${fmt$(ud.usdEarned||0)}</div>
-    <div style="font-size:12px;color:rgba(255,255,255,.6);margin-top:4px">${T('referralsNeededLabel')} ${ud.activeReferrals||0}/${CFG.minRefs} ${T('neededWord')} · ${S.country||'Detecting…'}</div>
-    <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,.8)">
-        ${isBD?T('bdMethodsLabel'):T('globalMethodsLabel')}
-      </div>
-      <div style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,.8)">
-        ${T('adsWatchedLabel')} ${ud.adsWatched||0}
-      </div>
+  <div class="hx-plate">
+    <div class="hx-plate-lb">${T('bal')}</div>
+    <div class="hx-plate-code" style="font-size:38px;letter-spacing:0;margin-bottom:6px">${fmt$(ud.usdEarned||0)}</div>
+    <div style="font-size:12px;color:#c4cfdc">${T('referralsNeededLabel')} ${ud.activeReferrals||0}/${CFG.minRefs} ${T('neededWord')} · ${S.country||'Detecting…'}</div>
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+      <div class="hx-chipx">${isBD?T('bdMethodsLabel'):T('globalMethodsLabel')}</div>
     </div>
   </div>
   <div class="card">
