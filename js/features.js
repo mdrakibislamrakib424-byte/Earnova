@@ -118,10 +118,10 @@ function canSpinToday(ud){
 function buildSpinWheelCard(){
   const ud=S.userData||{};
   const canSpin=canSpinToday(ud);
-  return `<div class="card mb12" style="text-align:center;background:linear-gradient(135deg,rgba(124,58,237,.06),rgba(236,72,153,.06));border:1.5px solid #e9d5ff;cursor:pointer" onclick="openSpinWheel()">
-    <div style="font-size:32px;margin-bottom:6px">🎡</div>
-    <div class="sf" style="font-size:15px;font-weight:800;color:#7c3aed;margin-bottom:2px">Daily Spin Wheel</div>
-    <div style="font-size:12px;color:#64748b">${canSpin ? 'Spin now for a free bonus! 🎁' : '✅ Already spun today — come back tomorrow!'}</div>
+  return `<div class="hx-plate" style="cursor:pointer" onclick="openSpinWheel()">
+    <div style="font-size:34px;margin-bottom:6px">🎡</div>
+    <div class="hx-plate-code" style="font-size:20px;letter-spacing:.04em;margin-bottom:4px">Daily Spin Wheel</div>
+    <div style="font-size:12px;color:#c4cfdc">${canSpin ? 'Spin now for a free bonus! 🎁' : '✅ Already spun today — come back tomorrow!'}</div>
   </div>`;
 }
 
@@ -403,7 +403,7 @@ function buildLeaderboardPage(){
   </div>
 
   ${myRank>=0?`
-  <div style="background:linear-gradient(135deg,#2563eb,#059669);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+  <div style="background:linear-gradient(180deg,#0f2f4f,#081a31);border:1.5px solid rgba(180,200,215,.6);box-shadow:0 0 0 2px rgba(18,30,45,.85),0 8px 18px rgba(5,15,30,.3);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between">
     <div>
       <div style="font-size:11px;color:rgba(255,255,255,.7);font-weight:600">${T('lbYourRank')}</div>
       <div style="font-size:28px;font-weight:800;color:#fbbf24">#${myRank+1}</div>
