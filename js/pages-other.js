@@ -870,8 +870,8 @@ async function submitTaskProof(taskId){
     S.socialView = null;
     render();
     window.scrollTo(0,0);
-    // social task submit সফল হওয়ার পর natural transition point এ interstitial
-    showInterstitialAd();
+    // social task submit সফল হওয়ার পর — rewarded interstitial (ID না থাকলে সাধারণ interstitial)
+    showSuccessAd();
 
   }catch(e){
     await stRemoveUploads(uploaded);

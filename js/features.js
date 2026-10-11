@@ -687,3 +687,182 @@ async function loadUserAwards(uid){
 }
 
 // EARNOVA v3 — Production Build
+
+
+// ════════════════════════════════════════════════════════
+// 🧠 DAILY QUIZ — প্রতিদিন ১০টা অঙ্কের প্রশ্ন; প্রতিটা উত্তর জমা দেওয়ার আগে
+// rewarded ad পুরো দেখতে হয়; উত্তর সঠিক হলে CFG.quizReward পায়, ভুল হলে কিছু না।
+// ▸ প্রশ্ন ইউজার+তারিখ দিয়ে seed করা — একই দিনে একই ইউজার সবসময় একই প্রশ্ন পায়
+// ▸ অগ্রগতি Supabase users.quiz_progress-এ (quiz_update.sql চালাতে হবে), তাই অ্যাপের ডেটা
+//   মুছে বা অন্য ফোনে লগইন করেও একই প্রশ্নে দ্বিতীয়বার রিওয়ার্ড পাওয়া যায় না
+// ▸ প্রতিটা প্রশ্নে একবারই চেষ্টা (ভুল হলে আর retry নেই)
+// ════════════════════════════════════════════════════════
+const QUIZ_COUNT = 10;
+
+function _quizDay(){
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function _quizRng(seed){
+  let h = 1779033703 ^ seed.length;
+  for(let i=0;i<seed.length;i++){ h = Math.imul(h ^ seed.charCodeAt(i), 3432918353); h = (h<<13)|(h>>>19); }
+  let a = (h ^ (h>>>16)) >>> 0;
+  return function(){ // mulberry32
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t>>>15), t | 1);
+    t ^= t + Math.imul(t ^ (t>>>7), t | 61);
+    return ((t ^ (t>>>14)) >>> 0) / 4294967296;
+  };
+}
+function quizGenerate(uid, day){
+  const r = _quizRng(String(uid)+'|'+day);
+  const ri = (a,b)=> a + Math.floor(r()*(b-a+1));
+  const qs = [];
+  for(let i=0;i<QUIZ_COUNT;i++){
+    let t, ans;
+    if(i<3){ const a=ri(2,30), b=ri(2,30); t=a+' + '+b; ans=a+b; }
+    else if(i<5){ const a=ri(20,90), b=ri(2,a-1); t=a+' − '+b; ans=a-b; }
+    else if(i<8){ const a=ri(2,12), b=ri(2,30); t=a+' × '+b; ans=a*b; }
+    else if(i===8){ const b=ri(2,12), q=ri(2,20); t=(b*q)+' ÷ '+b; ans=q; }
+    else { const a=ri(2,9), b=ri(2,9), c=ri(2,30); t=a+' × '+b+' + '+c; ans=a*b+c; }
+    qs.push({t, a:ans});
+  }
+  return qs;
+}
+
+async function quizInit(){
+  const day = _quizDay();
+  if(S.quiz && S.quiz.day===day) return; // লোড হয়েছে বা হচ্ছে
+  const uid = S.user?.uid;
+  if(!uid) return;
+  S.quiz = { day, qs: quizGenerate(uid, day), prog:{}, loaded:false, busy:false, err:'' };
+  try{
+    const { data, error } = await sb.from('users').select('quiz_progress').eq('id', uid).maybeSingle();
+    if(error) throw error;
+    const all = (data && data.quiz_progress) || {};
+    const prog = {};
+    for(let i=0;i<QUIZ_COUNT;i++){ const v = all[day+'_'+i]; if(v===0||v===1) prog[i]=v; }
+    S.quiz.prog = prog;
+  }catch(e){
+    S.quiz.err = 'setup';
+  }
+  S.quiz.loaded = true;
+  if(S.page==='quiz') render();
+}
+function quizNextIdx(){
+  const q = S.quiz; if(!q) return -1;
+  for(let i=0;i<QUIZ_COUNT;i++){ if(q.prog[i]===undefined) return i; }
+  return -1;
+}
+function quizStats(){
+  const q = S.quiz || {prog:{}};
+  let answered=0, correct=0;
+  for(let i=0;i<QUIZ_COUNT;i++){ if(q.prog[i]!==undefined){ answered++; if(q.prog[i]===1) correct++; } }
+  return { answered, correct, earned: correct*CFG.quizReward };
+}
+
+function quizSubmit(){
+  const q = S.quiz; if(!q || !q.loaded || q.busy || q.err) return;
+  const idx = quizNextIdx(); if(idx<0) return;
+  const inp = document.getElementById('qzIn');
+  const raw = inp ? String(inp.value||'').trim() : '';
+  if(raw==='' || !isFinite(Number(raw))){ toast(T('qzEnter'),'w'); return; }
+  const val = Number(raw);
+  q.busy = true; S.adActive = true;
+  const btn = document.getElementById('qzBtn'); if(btn) btn.disabled = true;
+  showRewardedAd(
+    ()=>{ S.adActive = false; quizFinish(idx, val); },
+    ()=>{ S.adActive = false; q.busy = false; const b=document.getElementById('qzBtn'); if(b) b.disabled=false; toast(T('qzAdFail'),'w'); }
+  );
+}
+async function quizFinish(idx, val){
+  const q = S.quiz; if(!q) return;
+  const uid = S.user?.uid;
+  const ok = (val === q.qs[idx].a) ? 1 : 0;
+  try{
+    // প্রতিটা প্রশ্ন Postgres-এ atomically claim — একই প্রশ্নে দ্বিতীয়বার রিওয়ার্ড হয় না
+    const { data: claimed, error } = await sb.rpc('claim_quiz', { p_uid: uid, p_day: q.day, p_idx: idx, p_ok: ok });
+    if(error){ q.err='setup'; q.busy=false; render(); return; }
+    if(!claimed){ // অন্য ডিভাইস থেকে আগেই জমা হয়েছে — নতুন করে লোড
+      S.quiz = null; q.busy=false; quizInit(); toast(T('qzAlready'),'i'); return;
+    }
+    q.prog[idx] = ok;
+    if(ok){
+      await atomicIncrement(uid, 'usdEarned', CFG.quizReward);
+      await addTodayEarned(uid, CFG.quizReward);
+      toast('✅ '+T('qzRight')+' +'+fmt$(CFG.quizReward),'s',3200);
+    } else {
+      toast('❌ '+T('qzWrong'),'e',3200);
+    }
+    try{ trackEvent('quiz_answer', { idx, ok }); }catch(e){}
+  }catch(e){
+    toast(T('qzLoadFail'),'e');
+  }
+  q.busy = false;
+  render();
+}
+
+function buildQuizPage(){
+  const q = S.quiz;
+  if(!q || !q.loaded){
+    return `<div class="hx-qz"><div class="hx-qzhead"><div class="hx-qzt">${T('qzTitle')}</div></div><div style="text-align:center;padding:40px 0"><div class="sp" style="margin:0 auto"></div></div></div>`;
+  }
+  const st = quizStats();
+  const nxt = quizNextIdx();
+  const reward = fmt$(CFG.quizReward);
+  const dots = Array.from({length:QUIZ_COUNT},(_,i)=>{
+    const v = q.prog[i];
+    const cls = v===1 ? 'ok' : v===0 ? 'no' : (i===nxt ? 'cur' : '');
+    return `<span class="hx-qzd ${cls}">${i+1}</span>`;
+  }).join('');
+  let body = '';
+  if(q.err){
+    body = `<div class="hx-qzcard"><div class="hx-qzmsg">${T('qzSetup')}</div></div>`;
+  } else if(nxt>=0){
+    body = `<div class="hx-qzcard">
+      <div class="hx-qzq">${T('qzQ')} ${nxt+1} / ${QUIZ_COUNT}</div>
+      <div class="hx-qzx">${q.qs[nxt].t} = ?</div>
+      <input id="qzIn" class="hx-qzin" type="number" inputmode="numeric" pattern="[0-9]*" placeholder="${T('qzYourAns')}" autocomplete="off" onkeydown="if(event.key==='Enter')quizSubmit()">
+      <button id="qzBtn" class="hx-qzbtn" onclick="quizSubmit()" ${q.busy?'disabled':''}>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>${T('qzSubmit')}</button>
+      <div class="hx-qznote">${T('qzNote')}</div>
+    </div>`;
+  } else {
+    body = `<div class="hx-qzcard hx-qzdone">
+      <div class="hx-qzx" style="font-size:20px">${T('qzDone')}</div>
+      <div class="hx-qznote" style="margin-top:6px">${T('qzDoneSub')}</div>
+    </div>`;
+  }
+  const hist = Array.from({length:QUIZ_COUNT},(_,i)=>i).filter(i=>q.prog[i]!==undefined).reverse().map(i=>{
+    const good = q.prog[i]===1;
+    return `<div class="hx-qzrow ${good?'ok':'no'}">
+      <span class="hx-qzri">${good?'✓':'✗'}</span>
+      <span class="hx-qzre">${q.qs[i].t} = <b>${q.qs[i].a}</b></span>
+      <span class="hx-qzra">${good?'+'+reward:T('qzWrong')}</span>
+    </div>`;
+  }).join('');
+  return `<div class="hx-qz">
+    <div class="hx-qzhead">
+      <div class="hx-qzt">${T('qzTitle')}</div>
+      <div class="hx-qzs">${T('qzSub').replace('{r}',reward)}</div>
+      <div class="hx-qzstats">
+        <div class="hx-stat"><small>${T('qzAnswered')}</small><b>${st.answered}/${QUIZ_COUNT}</b></div>
+        <div class="hx-stat b"><small>${T('qzCorrect')}</small><b>${st.correct}</b></div>
+        <div class="hx-stat g"><small>${T('qzEarned')}</small><b>${fmt$(st.earned)}</b></div>
+      </div>
+    </div>
+    <div class="hx-qzdots">${dots}</div>
+    ${body}
+    ${hist?`<div class="hx-qzhist">${hist}</div>`:''}
+  </div>`;
+}
+
+// Home পেজের ছোট কার্ড
+function buildQuizHomeCard(){
+  return `<button class="hx-qzhome" data-page="quiz">
+    <span class="hx-qzhi">🧠</span>
+    <span class="hx-qzht"><b>${T('qzTitle')}</b><small>${T('qzHomeSub').replace('{r}',fmt$(CFG.quizReward))}</small></span>
+    <span class="hx-qzhg">›</span>
+  </button>`;
+}

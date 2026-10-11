@@ -24,6 +24,12 @@ const S = {
 const LANGS={
   en:{n:'English',f:'🇺🇸',d:'ltr',t:{
     tkDetailTitle:'Task Details',tkSearchPh:'Search tasks...',tkAll:'All',tkNoMatch:'No matching tasks found.',
+    qzTitle:'Daily Quiz',qzSub:'10 questions every day · {r} per correct answer',qzHomeSub:'10 questions daily · {r} per correct answer',
+    qzAnswered:'Answered',qzCorrect:'Correct',qzEarned:'Earned',qzQ:'Question',qzYourAns:'Type your answer',
+    qzSubmit:'Submit Answer & Watch Ad',qzNote:'Watch the ad fully to submit. Wrong answer = no reward. One try per question.',
+    qzEnter:'Please enter a number',qzAdFail:'Ad not completed — please try again',qzDone:'🎉 Today\'s quiz is complete',qzDoneSub:'Come back tomorrow for 10 new questions.',
+    qzRight:'Correct!',qzWrong:'Wrong',qzSetup:'Quiz is not set up yet. Please contact support.',qzLoadFail:'Something went wrong. Please try again.',qzAlready:'This question was already answered.',
+    hxAdIntroT:'🎉 Well done!',hxAdIntroS:'A short ad will play in',hxAdSkip:'Skip',
     tkDo:'Do',tkRedo:'Redo',tkPending:'Pending',tkApproved:'Approved',tkFull:'Full',
     tkRules:'Task Rules',tkSubmitProof:'Submit Proof',tkFillAll:'Complete all required steps',
     tkScreenshot:'Screenshot',tkTextProof:'Link / Text',tkOptional:'(optional)',tkTextPh:'Paste the link or write here...',
@@ -192,6 +198,12 @@ const LANGS={
   }},
   bn:{n:'বাংলা',f:'🇧🇩',d:'ltr',t:{
     tkDetailTitle:'টাস্কের বিস্তারিত',tkSearchPh:'টাস্ক খুঁজুন...',tkAll:'সব',tkNoMatch:'কোনো মিল পাওয়া যায়নি।',
+    qzTitle:'ডেইলি কুইজ',qzSub:'প্রতিদিন ১০টি প্রশ্ন · প্রতি সঠিক উত্তরে {r}',qzHomeSub:'প্রতিদিন ১০টি প্রশ্ন · প্রতি সঠিক উত্তরে {r}',
+    qzAnswered:'উত্তর দেওয়া',qzCorrect:'সঠিক',qzEarned:'আয়',qzQ:'প্রশ্ন',qzYourAns:'আপনার উত্তর লিখুন',
+    qzSubmit:'উত্তর জমা দিন ও বিজ্ঞাপন দেখুন',qzNote:'জমা দিতে বিজ্ঞাপনটি পুরো দেখুন। ভুল হলে রিওয়ার্ড নেই। প্রতি প্রশ্নে একবারই সুযোগ।',
+    qzEnter:'একটি সংখ্যা লিখুন',qzAdFail:'বিজ্ঞাপন সম্পূর্ণ দেখা হয়নি — আবার চেষ্টা করুন',qzDone:'🎉 আজকের কুইজ শেষ',qzDoneSub:'আগামীকাল আবার ১০টি নতুন প্রশ্ন পাবেন।',
+    qzRight:'সঠিক!',qzWrong:'ভুল',qzSetup:'কুইজ এখনো সেটআপ হয়নি। সাপোর্টে যোগাযোগ করুন।',qzLoadFail:'সমস্যা হয়েছে, আবার চেষ্টা করুন।',qzAlready:'এই প্রশ্নের উত্তর আগেই দেওয়া হয়েছে।',
+    hxAdIntroT:'🎉 অভিনন্দন!',hxAdIntroS:'একটি ছোট বিজ্ঞাপন শুরু হবে',hxAdSkip:'এড়িয়ে যান',
     tkDo:'করুন',tkRedo:'আবার',tkPending:'অপেক্ষমাণ',tkApproved:'অনুমোদিত',tkFull:'পূর্ণ',
     tkRules:'টাস্কের নিয়ম',tkSubmitProof:'প্রমাণ জমা দিন',tkFillAll:'সব প্রয়োজনীয় ধাপ পূরণ করুন',
     tkScreenshot:'স্ক্রিনশট',tkTextProof:'লিংক / লেখা',tkOptional:'(ঐচ্ছিক)',tkTextPh:'লিংক পেস্ট করুন বা এখানে লিখুন...',

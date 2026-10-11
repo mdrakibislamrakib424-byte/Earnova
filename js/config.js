@@ -335,6 +335,8 @@ const CFG = {
     { amount:0.20, weight:2,  color:'#a78bfa' },
     { amount:0.50, weight:1,  color:'#fb923c' },
   ],
+  // Daily Quiz: প্রতিটা সঠিক উত্তরের রিওয়ার্ড (USD)
+  get quizReward(){ return parseFloat(localStorage.getItem('ez_quizReward')||'0.03'); },
   get minUSD(){ return parseInt(localStorage.getItem('ez_minUSD')||'12'); },
   get minRefs(){ return parseInt(localStorage.getItem('ez_minRefs')||'5'); },
   maxDevAcc:2,

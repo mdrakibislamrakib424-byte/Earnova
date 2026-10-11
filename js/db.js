@@ -698,7 +698,7 @@ async function submitWithdraw(method,account,amount){
   // কল করা হচ্ছিল না — মানে interstitial ad কখনো দেখাতোই না। এখানে
   // withdrawal request সফল হওয়ার পর দেখানো হচ্ছে — এটা natural transition
   // point, আর rewarded video-র ঠিক পরে না বলে ads স্ট্যাক করে না।
-  showInterstitialAd();
+  showSuccessAd(); // withdraw সফল — rewarded interstitial (ID না থাকলে সাধারণ interstitial)
 }
 
 // ─── SMART CACHE SYSTEM ───────────────────────────────
@@ -1164,7 +1164,14 @@ function setupListeners(uid){
     const raw = snap.val();
     const _prevBal = typeof S.userData?.usdEarned==='number' ? S.userData.usdEarned : null;
     // ✅ Fix 1: snake_case → camelCase convert করতে হবে
+    const _prevOffers = S.userData ? (S.userData.offersCompleted||0) : null;
+    const _prevRefs   = S.userData ? (S.userData.activeReferrals||0) : null;
     S.userData = raw ? _userFromDB(raw) : raw;
+    // ✅ CPA offer সম্পন্ন বা referral সফল হলে (সংখ্যা বাড়লে) — সফল-কাজের অ্যাড।
+    //    প্রথম লোডে (prev==null) বা withdraw-এ referral শূন্য হলে (কমলে) কিছু হয় না।
+    if(S.userData && _prevOffers!==null && ((S.userData.offersCompleted||0) > _prevOffers || (S.userData.activeReferrals||0) > _prevRefs)){
+      try{ showSuccessAd(); }catch(e){}
+    }
     // 🆕 Recent Activities: balance বদলালে (ad reward, offer, spin, referral, withdraw...) লগ হবে
     if(_prevBal!==null && S.userData && typeof S.userData.usdEarned==='number'){
       const diff = S.userData.usdEarned - _prevBal;

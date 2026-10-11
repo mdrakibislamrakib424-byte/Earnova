@@ -9,6 +9,7 @@
 let _lastRenderedPageForAd = null;
 function render(){
   if(S.page !== 'social') S.socialView = null; // Social Task detail শুধু social পেজেই থাকে
+  if(S.page !== 'quiz') S.quiz = null;         // Quiz-এ ঢুকলেই ডেটাবেস থেকে নতুন করে লোড হয়
   if(S.page !== _lastRenderedPageForAd){
     _lastRenderedPageForAd = S.page;
     maybeShowPageEntryAd(S.page); // fire-and-forget — render() ব্লক করবে না
@@ -29,6 +30,7 @@ function render(){
     console.error('Render error:', err);
     showRenderFallback(err);
   }
+  try{ hxSyncBanner(); }catch(e){} // নিচের ব্যানার: লগইন থাকলে দেখায়, লগআউটে লুকায়
 }
 
 function setStatusBarColor(color){
@@ -185,35 +187,9 @@ function buildWelcome(){
       </div>
 
       <!-- Buttons -->
-      <!-- ── User Reviews ── -->
-      <div style="margin-bottom:20px;text-align:left">
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;color:#fff;margin-bottom:4px;text-align:center">${T('reviewsTitle')}</div>
-        <div style="font-size:11px;color:rgba(255,255,255,.5);text-align:center;margin-bottom:12px">${T('reviewsSub')}</div>
-        <!-- ══ Trustpilot Widget — account খুলে script পেলে নিচে বসান ══ -->
-        <!-- TRUSTPILOT_WIDGET_START -->
-        <!-- TRUSTPILOT_WIDGET_END -->
-
-        ${[
-          {n:'Rahim Uddin',    av:'R', gr:'#2563eb,#059669', tx:'"মাত্র ৩ দিনে $5 আয় করলাম। bKash-এ Withdraw ১ ঘণ্টায়। অসাধারণ প্ল্যাটফর্ম!"', dt:'2 days ago'},
-          {n:'Sumaiya Khatun', av:'S', gr:'#7c3aed,#ec4899', tx:'"Real money দেয়! Survey করি আর ঘরে বসে আয় করি। সেরা earning app!"', dt:'3 days ago'},
-          {n:'Arif Hossain',   av:'A', gr:'#f59e0b,#ef4444', tx:'"Referral করে extra income হচ্ছে। প্রতিদিন login bonus পাই। Highly recommended!"', dt:'5 days ago'},
-          {n:'Nusrat Jahan',   av:'N', gr:'#06b6d4,#2563eb', tx:'"Binance-এ Withdraw করলাম, খুব সহজ। Offers গুলো real আর পেমেন্ট সময়মতো আসে।"', dt:'1 week ago'},
-          {n:'Karim Sheikh',   av:'K', gr:'#10b981,#2563eb', tx:'"বন্ধুদের refer করে মাসে extra $10+ আয় হচ্ছে। সবাইকে recommend করব।"', dt:'1 week ago'},
-          {n:'Fatema Begum',   av:'F', gr:'#e11d48,#f59e0b', tx:'"Social task গুলো অনেক সহজ। YouTube subscribe করে $0.50 পেলাম। ভরসার জায়গা।"', dt:'2 weeks ago'},
-          {n:'Jamal Uddin',    av:'J', gr:'#8b5cf6,#06b6d4', tx:'"প্রতিদিন Daily Bonus আসে। Offers complete করলে সাথে সাথে balance যোগ হয়। Great!"', dt:'2 weeks ago'},
-          {n:'Roksana Akter',  av:'R', gr:'#059669,#2563eb', tx:'"USDT-তে withdraw করলাম, ২৪ ঘণ্টার মধ্যে পেলাম। সবচেয়ে reliable earning site!"', dt:'3 weeks ago'},
-          {n:'Milon Haque',    av:'M', gr:'#dc2626,#7c3aed', tx:'"Survey করে আর offer complete করে মাসে $20+ আয় হচ্ছে। Withdraw এ কোনো সমস্যা নেই।"', dt:'3 weeks ago'},
-          {n:'Sharmin Akter',  av:'S', gr:'#0284c7,#10b981', tx:'"App টা use করা অনেক সহজ। Nagad-এ withdraw পেলাম ১ ঘণ্টায়। Excellent service!"', dt:'1 month ago'},
-        ].map(r=>`
-          <div style="background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:13px 14px;margin-bottom:9px">
-            <div style="display:flex;align-items:center;gap:9px;margin-bottom:7px">
-              <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,${r.gr});display:flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:800;flex-shrink:0">${r.av}</div>
-              <div><div style="font-size:12px;font-weight:700;color:#fff">${r.n}</div><div style="font-size:10px;color:#f59e0b">⭐⭐⭐⭐⭐</div></div>
-              <div style="margin-left:auto;font-size:10px;color:rgba(255,255,255,.35)">${r.dt}</div>
-            </div>
-            <div style="font-size:12px;color:rgba(255,255,255,.65);line-height:1.6">${r.tx}</div>
-          </div>`).join('')}
-      </div>
+      <!-- ── রিভিউ সেকশন: বানানো রিভিউ সরানো হয়েছে। সত্যিকারের Trustpilot widget পেলে নিচে বসান ── -->
+      <!-- TRUSTPILOT_WIDGET_START -->
+      <!-- TRUSTPILOT_WIDGET_END -->
 
       <button onclick="S.page='register';renderAuth()" style="width:100%;background:linear-gradient(135deg,#2563eb,#059669);border:none;border-radius:14px;padding:15px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;font-family:'Syne',sans-serif;box-shadow:0 6px 24px rgba(37,99,235,.4);margin-bottom:10px">${T('startEarningBtn')}</button>
       <button onclick="S.page='login';renderAuth()" style="width:100%;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);border-radius:14px;padding:13px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif">${T('alreadyLoginBtn')}</button>
@@ -514,6 +490,7 @@ function renderApp(){
   else if(S.page==='wallframe') html+=buildWallFramePage();
   else if(S.page==='leaderboard') html+=buildLeaderboardPage();
   else if(S.page==='spin') html+=buildSpinPage();
+  else if(S.page==='quiz') html+=buildQuizPage();
   else html+=buildHome();
   // Universal review bar — সব logged-in page-এর নিচে
   if(S.user && !localStorage.getItem(REVIEW_LS_KEY)){
@@ -530,6 +507,7 @@ function renderApp(){
   if(S.page==='home' && typeof hxInitHome==='function') hxInitHome();
   // Auto-load page data
   if(S.page==='social') loadSocialTasks();
+  if(S.page==='quiz') quizInit();
   if(S.page==='offers') updateWallCardStatuses();
 }
 
@@ -561,6 +539,7 @@ function buildNav(){
 
 // ── Professional line-style icon set (নেভিগেশনের জন্য) ──
 const NAV_ICONS = {
+  quiz:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.2 1.1 2V16h5v-.2c0-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/></svg>',
   home:    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V9.5z"/></svg>',
   wallet:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="14" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.4"/></svg>',
   target:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/></svg>',
@@ -621,6 +600,7 @@ function buildSidebar(){
   <button class="si${S.page==='notices'?' on':''}" data-page="notices"><span class="si-ico">${NAV_ICONS.bell}</span>${T('ns')} ${S.noticeQueue.length>0?`<span class="bdg bdr" style="margin-left:auto">${S.noticeQueue.length}</span>`:''}</button>
   <button class="si${S.page==='faq'?' on':''}" data-page="faq"><span class="si-ico">${NAV_ICONS.question}</span>${T('sdbFAQ')}</button>
   <button class="si${S.page==='leaderboard'?' on':''}" data-page="leaderboard"><span class="si-ico">${NAV_ICONS.trophy}</span>${T('sdbLeaderboard')}</button>
+  <button class="si${S.page==='quiz'?' on':''}" data-page="quiz"><span class="si-ico">${NAV_ICONS.quiz}</span>${T('qzTitle')}</button>
   <div class="sdb-sg">${T('sdbInfo')}</div>
   <a href="about.html" onclick="openLink('about.html');return false;" class="si" style="text-decoration:none;color:inherit"><span class="si-ico">${NAV_ICONS.building}</span>${T('sdbAboutUs')}</a>
   <a href="contact.html" onclick="openLink('contact.html');return false;" class="si" style="text-decoration:none;color:inherit"><span class="si-ico">${NAV_ICONS.mail}</span>${T('sdbContact')}</a>
@@ -1095,6 +1075,7 @@ function buildHome(){
   ${hxBuildHero()}
 
   ${buildQuickActions()}
+  ${buildQuizHomeCard()}
   ${buildRecentActivities()}
   ${buildCommunityNews()}
 
