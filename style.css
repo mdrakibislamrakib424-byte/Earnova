@@ -1323,12 +1323,23 @@ body.hx-has-banner::after{content:'';position:fixed;left:0;right:0;bottom:var(--
 .hx-qzht b{font-family:'Syne',sans-serif;font-size:14px;color:#fff}
 .hx-qzht small{font-size:11px;color:#a6b5c6}
 .hx-qzhg{font-size:24px;color:#ffd88f;font-weight:700}
-body.dark .hx-qzcard,body.dark .hx-qzrow{background:#1b2128;border-color:#2e3843}
-body.dark .hx-qzx{color:#e6edf3}
-body.dark .hx-qzre{color:#cbd5e1}
-body.dark .hx-qzin{background:#11161b;border-color:#34404c;color:#e6edf3}
-body.dark .hx-qzd{background:#2a323b;border-color:#3b4651;color:#9fb0c0}
-body.dark .hx-qznote{color:#9fb0c0}
+/* Daily Quiz — Night mode: অন্য সব পেজের মতো রুপালি কার্ড (হেডার/Home কার্ড গাঢ় নীলই থাকে) */
+body.dark .hx-qzcard,body.dark .hx-qzrow{
+  background:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,transparent 1px 3px),linear-gradient(135deg,#eef0f3 0%,#c3c9cf 40%,#e6e9ec 62%,#a9b1b9 100%);
+  border-color:rgba(255,255,255,.75);color:#16212c;
+  box-shadow:0 4px 14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.9)}
+body.dark .hx-qzx{color:#0f2f4f}
+body.dark .hx-qzq{color:#0b6a66}
+body.dark .hx-qzre{color:#2b3946}
+body.dark .hx-qzin{background:#f6f8f9;border-color:#98a3ad;color:#0f172a}
+body.dark .hx-qzin:focus{border-color:#0d9488;box-shadow:0 0 0 3px rgba(13,148,136,.25)}
+body.dark .hx-qznote{color:#455360}
+body.dark .hx-qzmsg{color:#92400e}
+body.dark .hx-qzrow.ok{border-color:rgba(13,148,136,.7)}
+body.dark .hx-qzrow.no{border-color:rgba(220,38,38,.6)}
+body.dark .hx-qzrow.ok .hx-qzra{color:#0b6a66}
+body.dark .hx-qzrow.no .hx-qzra{color:#b91c1c}
+body.dark .hx-qzd{background:linear-gradient(180deg,#f7f9fa,#cfd6dc);border-color:#98a3ad;color:#455360}
 body.dark .hx-qzd.ok{background:#0d9488;color:#fff;border-color:#0d9488}
 body.dark .hx-qzd.no{background:#dc2626;color:#fff;border-color:#dc2626}
-body.dark .hx-qzd.cur{background:#0f2f4f;color:#ffd88f;border-color:#dcae45}
+body.dark .hx-qzd.cur{background:#0f2f4f;color:#ffd88f;border-color:#dcae45;box-shadow:0 0 0 3px rgba(220,174,69,.3)}
