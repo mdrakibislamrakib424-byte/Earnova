@@ -492,14 +492,6 @@ function renderApp(){
   else if(S.page==='spin') html+=buildSpinPage();
   else if(S.page==='quiz') html+=buildQuizPage();
   else html+=buildHome();
-  // Universal review bar — সব logged-in page-এর নিচে
-  if(S.user && !localStorage.getItem(REVIEW_LS_KEY)){
-    html+=`<div style="margin:8px 16px 16px;background:linear-gradient(135deg,#fffbeb,#f0fdf4);border:1.5px solid #fde68a;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px">
-      <span style="font-size:20px">⭐</span>
-      <div style="flex:1;font-size:12px;color:#92400e;font-weight:600">${T('reviewBarText')}</div>
-      <button onclick="showReviewPopup()" style="background:#f59e0b;border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0">${T('reviewBarBtn')}</button>
-    </div>`;
-  }
   html+=`</div></div>`;
   html+=buildBottomNav();
   $('#app').innerHTML=html;
