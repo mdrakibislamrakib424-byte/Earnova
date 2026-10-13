@@ -372,10 +372,31 @@ async function ensureUserRecord(u, extraName){
   return await loadUserData(u.id);
 }
 
-async function signInWithGoogle(){
+// ─── Google সাইন-ইন ──────────────────────────────────────────────
+// mode='register' : আগে থেকে অ্যাকাউন্ট থাকলে লগইন না করিয়ে বার্তা দেখায়।
+// mode='login'    : আগে থেকে অ্যাকাউন্ট থাকলে লগইন; না থাকলে (ডিভাইস লিমিটের ভেতরে) নতুন অ্যাকাউন্ট।
+// ডিভাইস লিমিট (CFG.maxDevAcc) Google + ম্যানুয়াল রেজিস্ট্রেশন মিলিয়ে গোনা হয়।
+let _googleBusy = false;
+
+async function _googleQuietSignOut(){
+  try{ await sb.auth.signOut(); }catch(e){}
+  try{ fAuth.currentUser = null; }catch(e){}
+  S.user = null; S.userData = null;
+}
+
+async function _deviceAccountCount(){
+  const snap = await fDB.ref('users').orderByChild('device_id').equalTo(getDeviceId()).once('value');
+  return Object.keys(snap.val() || {}).length;
+}
+
+async function signInWithGoogle(mode){
+  if(_googleBusy) return;
   if(!window.Capacitor?.Plugins?.SocialLogin){
     toast(T('socialLoginFailedMsg'),'e'); return;
   }
+  _googleBusy = true;
+  const btn = document.getElementById('socGoogleBtn');
+  if(btn) btn.disabled = true;
   try{
     const { SocialLogin } = window.Capacitor.Plugins;
     const res = await SocialLogin.login({ provider:'google', options:{ scopes:['email','profile'] } });
@@ -384,12 +405,42 @@ async function signInWithGoogle(){
     const { data, error } = await sb.auth.signInWithIdToken({ provider:'google', token: idToken });
     if(error) throw error;
     const u = data.user;
+
+    const existing = await loadUserData(u.id);
+    if(existing){
+      if(mode === 'register'){
+        // আগে থেকেই অ্যাকাউন্ট আছে — নতুন বানানো/লগইন না করে জানিয়ে দেওয়া
+        await _googleQuietSignOut();
+        toast(T('gAcctExists'),'e',5000);
+        return;
+      }
+      trackEvent('sign_up_or_login', { method:'google' });
+      await completeUserLogin(u);
+      return;
+    }
+
+    // নতুন অ্যাকাউন্ট — ডিভাইস লিমিট চেক
+    let devCount = 0;
+    try{ devCount = await _deviceAccountCount(); }catch(e){ console.warn('Device count check failed:', e); }
+    if(devCount >= CFG.maxDevAcc){
+      await _googleQuietSignOut();
+      toast(T('mx'),'e',5000);
+      return;
+    }
+
     await ensureUserRecord(u, res.result?.profile?.name);
     trackEvent('sign_up_or_login', { method:'google' });
     await completeUserLogin(u);
   }catch(e){
     console.error('Google login error:', e);
+    const msg = String(e?.message || e?.code || e || '').toLowerCase();
+    // ইউজার নিজে বাতিল করলে এরর দেখানো হবে না
+    if(/cancel|dismiss|closed|12501/.test(msg)) return;
     toast(T('socialLoginFailedMsg'),'e');
+  }finally{
+    _googleBusy = false;
+    const b = document.getElementById('socGoogleBtn');
+    if(b) b.disabled = false;
   }
 }
 
