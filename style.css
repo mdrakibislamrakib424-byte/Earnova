@@ -1343,3 +1343,8 @@ body.dark .hx-qzd{background:linear-gradient(180deg,#f7f9fa,#cfd6dc);border-colo
 body.dark .hx-qzd.ok{background:#0d9488;color:#fff;border-color:#0d9488}
 body.dark .hx-qzd.no{background:#dc2626;color:#fff;border-color:#dc2626}
 body.dark .hx-qzd.cur{background:#0f2f4f;color:#ffd88f;border-color:#dcae45;box-shadow:0 0 0 3px rgba(220,174,69,.3)}
+
+/* ── Google সাইন-ইন বাটন (Login/Register) ── */
+.ax-soc:active{transform:translateY(1px);box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.ax-soc:disabled{opacity:.6;cursor:default}
+.ax-soc svg{flex:0 0 auto}
