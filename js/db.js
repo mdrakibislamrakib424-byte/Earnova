@@ -377,6 +377,7 @@ async function ensureUserRecord(u, extraName){
 // mode='login'    : আগে থেকে অ্যাকাউন্ট থাকলে লগইন; না থাকলে (ডিভাইস লিমিটের ভেতরে) নতুন অ্যাকাউন্ট।
 // ডিভাইস লিমিট (CFG.maxDevAcc) Google + ম্যানুয়াল রেজিস্ট্রেশন মিলিয়ে গোনা হয়।
 let _googleBusy = false;
+const GOOGLE_WEB_CLIENT_ID = '1040669106457-618hjrn9cb9mobtr642damtomb0b4dkr.apps.googleusercontent.com';
 
 async function _googleQuietSignOut(){
   try{ await sb.auth.signOut(); }catch(e){}
@@ -399,6 +400,8 @@ async function signInWithGoogle(mode){
   if(btn) btn.disabled = true;
   try{
     const { SocialLogin } = window.Capacitor.Plugins;
+    // প্লাগিন তৈরি আছে কিনা নিশ্চিত করতে প্রতিবার initialize (একাধিকবার চালালে সমস্যা নেই)
+    try{ await SocialLogin.initialize({ google:{ webClientId: GOOGLE_WEB_CLIENT_ID } }); }catch(ie){ console.warn('SocialLogin init:', ie); }
     const res = await SocialLogin.login({ provider:'google', options:{ scopes:['email','profile'] } });
     const idToken = res?.result?.idToken;
     if(!idToken) throw new Error('No Google idToken returned');
@@ -436,7 +439,9 @@ async function signInWithGoogle(mode){
     const msg = String(e?.message || e?.code || e || '').toLowerCase();
     // ইউজার নিজে বাতিল করলে এরর দেখানো হবে না
     if(/cancel|dismiss|closed|12501/.test(msg)) return;
-    toast(T('socialLoginFailedMsg'),'e');
+    // ⚠️ সমস্যা ধরার জন্য আসল কারণটা বার্তার শেষে দেখানো হচ্ছে (ঠিক হয়ে গেলে এই অংশ সরানো যাবে)
+    const detail = String(e?.message || e?.code || e || '').replace(/\s+/g,' ').slice(0,140);
+    toast(T('socialLoginFailedMsg') + (detail ? ' [' + detail + ']' : ''),'e',9000);
   }finally{
     _googleBusy = false;
     const b = document.getElementById('socGoogleBtn');
