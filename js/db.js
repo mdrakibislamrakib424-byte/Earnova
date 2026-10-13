@@ -402,7 +402,8 @@ async function signInWithGoogle(mode){
     const { SocialLogin } = window.Capacitor.Plugins;
     // প্লাগিন তৈরি আছে কিনা নিশ্চিত করতে প্রতিবার initialize (একাধিকবার চালালে সমস্যা নেই)
     try{ await SocialLogin.initialize({ google:{ webClientId: GOOGLE_WEB_CLIENT_ID } }); }catch(ie){ console.warn('SocialLogin init:', ie); }
-    const res = await SocialLogin.login({ provider:'google', options:{ scopes:['email','profile'] } });
+    // ⚠️ scopes দেওয়া যাবে না: প্লাগিনের নিয়মে scopes দিলে MainActivity বদলাতে হয়। না দিলেও ডিফল্টে email+profile+idToken আসে।
+    const res = await SocialLogin.login({ provider:'google', options:{} });
     const idToken = res?.result?.idToken;
     if(!idToken) throw new Error('No Google idToken returned');
     const { data, error } = await sb.auth.signInWithIdToken({ provider:'google', token: idToken });
