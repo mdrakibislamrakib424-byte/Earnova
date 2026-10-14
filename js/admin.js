@@ -1101,7 +1101,7 @@ async function loadWithdrawals(c){
       <button id="exportWdBtn" class="btn bh" style="width:auto;padding:0 16px">📥 Export CSV</button>
     </div>` + sorted.map(w=>`<div class="arow">
       <div class="arow-l">
-        <div class="fw6 sm">${escapeHtml(w.user_email||w.uid)} — <span class="cy">${fmt$(w.amount)}</span></div>
+        <div class="fw6 sm">${escapeHtml(w.user_email||w.uid)} — <span class="cy">${fmt$(w.amount)}</span>${CFG.bdtMethods.includes(w.method)?` <span style="color:#059669;font-weight:800">≈ ৳${Math.round((parseFloat(w.amount)||0)*CFG.bdtRate).toLocaleString('en-US')}</span>`:''}</div>
         <div class="xs mu">${CFG.methodEmoji[w.method]||escapeHtml(w.method)||'—'} · ${escapeHtml(w.account)||'—'}</div>
         <div class="xs mu">🗓 ${fmtD(w.created_at)} · ID: ${(w.id||'').slice(0,8)}</div>
       </div>
@@ -1114,6 +1114,7 @@ async function loadWithdrawals(c){
       const csvRows = sorted.map(w=>({
         ID: w.id, 'User Email': w.user_email||w.uid, 'User Name': w.user_name||'',
         'Amount ($)': parseFloat(w.amount||0).toFixed(2),
+        'Amount (BDT)': CFG.bdtMethods.includes(w.method)?Math.round((parseFloat(w.amount)||0)*CFG.bdtRate):'',
         Method: w.method, Account: w.account, Status: w.status,
         Date: fmtD(w.created_at),
       }));
