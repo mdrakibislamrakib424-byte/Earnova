@@ -243,6 +243,52 @@ function renderCaptcha(containerId, onToken){
 //  AUTH PAGES — নতুন ডিজাইন (Indigo app bar + হালকা নীল ব্যাকগ্রাউন্ড + নীল কার্ড)
 //  সব ID (lgEm, lgPw, rgBtn, veOtp ...) আগের মতোই — শুধু চেহারা বদলেছে
 // ══════════════════════════════════════════════════════════
+// ─── সুন্দর বার্তা-কার্ড (error/info) — সাধারণ লাল toast-এর বদলে গুরুত্বপূর্ণ বার্তায় ───
+// o = {kind:'error'|'warn'|'info', title, text, btn, onBtn, btn2, onBtn2}
+function hxAuthMsg(o){
+  try{
+    const old=document.getElementById('hxAm'); if(old) old.remove();
+    const icons={
+      error:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.4v.1"/></svg>',
+      warn:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 2.8 19.5h18.4L12 3.5z"/><path d="M12 10v4.5M12 17.4v.1"/></svg>',
+      info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/></svg>'
+    };
+    const kind=icons[o.kind]?o.kind:'info';
+    const box=document.createElement('div');
+    box.className='hx-am'; box.id='hxAm';
+    box.innerHTML=`<div class="hx-am-card" role="alertdialog" aria-modal="true">
+      <div class="hx-am-ic ${kind}">${icons[kind]}</div>
+      <div class="hx-am-t">${escapeHtml(o.title||'')}</div>
+      <div class="hx-am-s">${escapeHtml(o.text||'')}</div>
+      ${o.btn?`<button type="button" class="hx-am-b" id="hxAmB">${escapeHtml(o.btn)}</button>`:''}
+      <button type="button" class="hx-am-b2" id="hxAmB2">${escapeHtml(o.btn2||T('amOk'))}</button>
+    </div>`;
+    const close=()=>{ box.remove(); };
+    box.addEventListener('click',(e)=>{ if(e.target===box) close(); });
+    document.body.appendChild(box);
+    const b1=box.querySelector('#hxAmB'); if(b1) b1.onclick=()=>{ close(); if(o.onBtn) o.onBtn(); };
+    box.querySelector('#hxAmB2').onclick=()=>{ close(); if(o.onBtn2) o.onBtn2(); };
+  }catch(e){ toast(o.text||o.title||'','e',4500); }
+}
+// "আগে থেকেই অ্যাকাউন্ট আছে" — Login বোতামসহ
+function hxShowAcctExists(text){
+  hxAuthMsg({kind:'info',title:T('amExistsT'),text:text||T('gAcctExists'),btn:T('amLoginBtn'),
+    onBtn:()=>{ S.page='login'; render(); }});
+}
+function hxShowDevLimit(){
+  hxAuthMsg({kind:'warn',title:T('amLimitT'),text:T('amLimitS').replace('{n}',CFG.maxDevAcc),btn:T('amLoginBtn'),
+    onBtn:()=>{ S.page='login'; render(); }});
+}
+
+// থিম আইকন: system (ফোন) / light (সূর্য) / dark (চাঁদ)
+function hxThemeIcon(size,mode){
+  const m=mode||S.themeMode||'system', z=size||17;
+  const a=`width="${z}" height="${z}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"`;
+  if(m==='light') return `<svg ${a}><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>`;
+  if(m==='dark') return `<svg ${a}><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>`;
+  return `<svg ${a}><rect x="6" y="2.5" width="12" height="19" rx="2.6"/><path d="M11 18.5h2"/></svg>`;
+}
+
 function axShell(title, inner, footer){
   return `<div class="ax">
     <div class="ax-bar"><div class="ax-bar-t">${title}</div></div>
@@ -526,7 +572,7 @@ function buildNav(){
     <div class="hx-plaque hx-sm" id="navBrand"><div class="hx-plaque-in"><img src="icons/hx-logo.png" alt=""><b>${escapeHtml(String(T('appName')).toUpperCase())}</b></div></div>
     <span class="hx-sp"></span>
     <div class="hx-bpill"><small>${T('hxTotalBal')}</small><b class="nav-bal" id="navBal">${fmt$(ud.usdEarned||0)}</b></div>
-    <button class="hx-ib" onclick="toggleDarkMode()" title="${T('darkModeTitle')}" aria-label="${T('darkModeTitle')}">${S.darkMode?icoSun:icoMoon}</button>
+    <button class="hx-ib" onclick="toggleDarkMode()" title="${T('darkModeTitle')}" aria-label="${T('darkModeTitle')}">${hxThemeIcon(17)}</button>
     <button class="hx-av2 hx-navav" id="navAv" aria-label="${T('pr')}">${ini}${hasNotice?'<div class="nav-nd"></div>':''}</button>
   </nav>`;
 }
@@ -602,7 +648,8 @@ function buildSidebar(){
 
   ${ud.isAdmin?`<div class="sdb-sg">${T('sdbAdmin')}</div><button class="si${S.page==='admin'?' on':''}" data-page="admin"><span class="si-ico">${NAV_ICONS.gear}</span>${T('ap')}</button>`:''}
   <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)">
-  <button class="si" onclick="toggleDarkMode()"><span class="si-ico">${S.darkMode?'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>':'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'}</span>${S.darkMode?T('sdbLightMode'):T('sdbDarkMode')}</button>
+  <div class="hx-thm-lb">${T('thmTitle')}</div>
+  <div class="hx-thm">${['system','light','dark'].map(m=>`<button type="button" class="${S.themeMode===m?'on':''}" onclick="setThemeMode('${m}')">${hxThemeIcon(14,m)}<span>${T(m==='system'?'thmSystem':m==='light'?'thmLight':'thmDark')}</span></button>`).join('')}</div>
   <button class="si" id="sbLang"><span class="si-ico">${NAV_ICONS.globe}</span>${T('ln')}: ${LANGS[S.lang]?.f||'🇺🇸'}</button>
   <button class="si" id="sbLo"><span class="si-ico">${icoLogout}</span>${T('lo')}</button>
   </div>
@@ -742,7 +789,7 @@ function buildHomeHeader(){
       <button class="hx-ib" id="navMenu" aria-label="Menu">${icoMenu}</button>
       <span class="hx-sp"></span>
       <button class="hx-ib${hasNotice?' has-dot':''}" id="hhBell" aria-label="Notices">${NAV_ICONS.bell}${hasNotice?'<span class="hx-ibdot"></span>':''}</button>
-      <button class="hx-ib" onclick="toggleDarkMode()" title="${T('darkModeTitle')}" aria-label="${T('darkModeTitle')}">${S.darkMode?icoSun:icoMoon}</button>
+      <button class="hx-ib" onclick="toggleDarkMode()" title="${T('darkModeTitle')}" aria-label="${T('darkModeTitle')}">${hxThemeIcon(17)}</button>
     </div>
     <div class="hx-hd-row">
       <div class="hx-brand">
@@ -1166,6 +1213,129 @@ function getMethodsForCountry(){
   return CFG.methodsByCountry.default;
 }
 
+// ─── Withdraw ফর্ম: পদ্ধতি অনুযায়ী ঘর/লেখা/যাচাই + টাকা↔ডলার ───
+function hxWdApply(m){
+  const f=CFG.payFields[m]||{type:'text'}, k=f.type;
+  const bdt=CFG.bdtMethods.includes(m);
+  const amt=$('#wdAmt'); if(!amt) return;
+  const acc=$('#wdAcc'), nameW=$('#wdNameWrap');
+  S._wdMethod=m;
+  const minBdt=Math.ceil(CFG.minUSD*CFG.bdtRate);
+  const cur=bdt?'bdt':'usd';
+  if(amt.dataset.cur!==cur){ amt.value=''; amt.dataset.cur=cur; }
+  $('#wdAmtLbl').textContent = bdt ? T('wdAmtBdt').replace('{min}',minBdt.toLocaleString('en-US'))
+                                   : T('wdAmtUsd').replace('{min}',CFG.minUSD);
+  amt.step = bdt?'1':'0.01';
+  amt.min = bdt?minBdt:CFG.minUSD;
+  amt.placeholder = bdt?String(minBdt):(CFG.minUSD+'.00');
+  amt.setAttribute('inputmode', bdt?'numeric':'decimal');
+  if(acc.dataset.m!==m){ acc.value=''; acc.dataset.m=m; const nm=$('#wdName'); if(nm) nm.value=''; }
+  const has = (key)=>{ const v=T(key); return v && v!==key ? v : ''; };
+  if(k==='text'){
+    $('#wdAccLbl').textContent=T('accountDetailsLabel'); acc.placeholder=T('accountPlaceholder'); $('#wdHint').textContent='';
+  }else{
+    $('#wdAccLbl').textContent=has('wdLbl_'+k);
+    acc.placeholder=has('wdPh_'+k);
+    $('#wdHint').textContent=has('wdHint_'+k);
+  }
+  acc.setAttribute('inputmode', k==='phone'?'tel':k==='email'?'email':k==='card'?'numeric':'text');
+  acc.maxLength = k==='phone'?16:k==='card'?23:k==='trc20'?40:80;
+  if(nameW){
+    nameW.style.display = k==='card'?'block':'none';
+    if(k==='card'){ $('#wdNameLbl').textContent=T('wdLbl_cardname'); $('#wdName').placeholder=T('wdPh_cardname'); }
+  }
+  hxWdConv();
+}
+function hxWdConv(){
+  const conv=$('#wdConv'), amt=$('#wdAmt'); if(!conv||!amt) return;
+  const m=S._wdMethod;
+  if(!CFG.bdtMethods.includes(m)){ conv.innerHTML=''; return; }
+  const tk=parseInt(amt.value,10)||0;
+  let h=T('wdRate').replace('{r}',CFG.bdtRate);
+  if(tk>0){
+    const usd=Math.floor(tk*100/CFG.bdtRate+1e-6)/100;
+    h+=' · <b>'+T('wdConvLine').replace('{usd}',usd.toFixed(2))+'</b>';
+  }
+  conv.innerHTML=h;
+}
+function hxWdBind(){
+  const amt=$('#wdAmt'), acc=$('#wdAcc');
+  if(amt) amt.oninput=hxWdConv;
+  if(acc) acc.oninput=()=>{
+    const f=CFG.payFields[S._wdMethod]||{};
+    if(f.type==='card'){
+      const d=acc.value.replace(/\D/g,'').slice(0,19);
+      acc.value=d.replace(/(.{4})/g,'$1 ').trim();
+    }
+  };
+}
+function hxLuhn(num){
+  let sum=0, alt=false;
+  for(let i=num.length-1;i>=0;i--){
+    let n=parseInt(num[i],10);
+    if(alt){ n*=2; if(n>9) n-=9; }
+    sum+=n; alt=!alt;
+  }
+  return sum%10===0;
+}
+// ফর্ম থেকে মান নিয়ে যাচাই করে: {ok, account, usd} অথবা {ok:false, err, focus}
+function hxWdCollect(m){
+  const f=CFG.payFields[m]||{type:'text'};
+  const bdt=CFG.bdtMethods.includes(m);
+  const raw=(($('#wdAmt')||{}).value||'').trim();
+  const bad=(key,focus,extra)=>({ok:false,err:(extra||T(key)),focus});
+  let usd;
+  if(bdt){
+    const tk=parseInt(raw,10), minTk=Math.ceil(CFG.minUSD*CFG.bdtRate);
+    if(!tk||tk<=0) return bad('wdErrAmt','wdAmt');
+    if(tk<minTk) return bad('','wdAmt',T('wdErrMinBdt').replace('{min}',minTk.toLocaleString('en-US')));
+    usd=Math.floor(tk*100/CFG.bdtRate+1e-6)/100;
+  }else{
+    usd=parseFloat(raw);
+    if(isNaN(usd)||usd<=0) return bad('wdErrAmt','wdAmt');
+  }
+  let account=((($('#wdAcc')||{}).value)||'').trim();
+  const emailRe=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  switch(f.type){
+    case 'phone':{
+      let d=account.replace(/\D/g,'');
+      if(d.startsWith('880')) d='0'+d.slice(3);
+      if(!/^01[3-9]\d{8}$/.test(d)) return bad('wdErrPhone','wdAcc');
+      account=d; break;
+    }
+    case 'email':
+      account=account.toLowerCase();
+      if(!emailRe.test(account)) return bad('wdErrEmail','wdAcc');
+      break;
+    case 'binance':{
+      if(account.includes('@')){
+        account=account.toLowerCase();
+        if(!emailRe.test(account)) return bad('wdErrBinance','wdAcc');
+      }else{
+        const d=account.replace(/\s/g,'');
+        if(!/^\d{5,16}$/.test(d)) return bad('wdErrBinance','wdAcc');
+        account=d;
+      }
+      break;
+    }
+    case 'trc20':
+      account=account.replace(/\s/g,'');
+      if(!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(account)) return bad('wdErrTrc20','wdAcc');
+      break;
+    case 'card':{
+      const nm=((($('#wdName')||{}).value)||'').trim().replace(/\s+/g,' ');
+      if(nm.length<3) return bad('wdErrCardName','wdName');
+      const d=account.replace(/\D/g,'');
+      if(d.length<13||d.length>19||!hxLuhn(d)) return bad('wdErrCardNo','wdAcc');
+      account=nm.toUpperCase()+' | '+d.replace(/(.{4})/g,'$1 ').trim();
+      break;
+    }
+    default:
+      if(account.length<4) return bad('invalidAccountMsg','wdAcc');
+  }
+  return {ok:true, account, usd:usd.toFixed(2)};
+}
+
 function buildWallet(){
   const ud=S.userData||{};
   const methods=getMethodsForCountry();
@@ -1174,6 +1344,7 @@ function buildWallet(){
   <div class="hx-plate">
     <div class="hx-plate-lb">${T('bal')}</div>
     <div class="hx-plate-code" style="font-size:38px;letter-spacing:0;margin-bottom:6px">${fmt$(ud.usdEarned||0)}</div>
+    ${isBD?`<div class="wd-bdt">${T('wdBalBdt').replace('{b}',Math.floor((ud.usdEarned||0)*CFG.bdtRate).toLocaleString('en-US'))}</div>`:''}
     <div style="font-size:12px;color:#c4cfdc">${T('referralsNeededLabel')} ${ud.activeReferrals||0}/${CFG.minRefs} ${T('neededWord')} · ${S.country||'Detecting…'}</div>
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
       <div class="hx-chipx">${isBD?T('bdMethodsLabel'):T('globalMethodsLabel')}</div>
@@ -1186,10 +1357,16 @@ function buildWallet(){
       <span class="method-logo-wrap">${CFG.methodLogo[m]||''}</span>
       <span class="method-name-txt">${CFG.methodEmoji[m]||m}</span>
     </button>`).join('')}</div>
-    <label class="lbl">${T('withdrawAmt')} (min $${CFG.minUSD})</label>
-    <input class="inp" id="wdAmt" type="number" min="${CFG.minUSD}" step="0.01" placeholder="${CFG.minUSD}.00">
-    <label class="lbl">${isBD?T('bkashNagadLabel'):T('accountDetailsLabel')}</label>
-    <input class="inp" id="wdAcc" placeholder="${isBD?T('bkashPlaceholder'):T('accountPlaceholder')}">
+    <label class="lbl" id="wdAmtLbl"></label>
+    <input class="inp" id="wdAmt" type="number" min="${CFG.minUSD}" step="0.01" autocomplete="off">
+    <div class="wd-conv" id="wdConv"></div>
+    <div id="wdNameWrap" style="display:none">
+      <label class="lbl" id="wdNameLbl"></label>
+      <input class="inp" id="wdName" type="text" autocomplete="off" maxlength="60">
+    </div>
+    <label class="lbl" id="wdAccLbl"></label>
+    <input class="inp" id="wdAcc" type="text" autocomplete="off">
+    <div class="wd-hint" id="wdHint"></div>
     <button class="btn bo" id="wdBtn">💸 ${T('sw')}</button>
   </div>
   <div class="sl">${T('history')}</div>
@@ -1225,7 +1402,7 @@ async function loadWithdrawHistory(){
           <div class="fw6 sm dfc" style="gap:7px">
             ${CFG.methodLogo[w.method]||'💳'}
             <span>${escapeHtml(CFG.methodEmoji[w.method]||w.method||'Payment')}</span>
-            — <span style="color:#059669;font-weight:700">${fmt$(w.amount||0)}</span>
+            — <span style="color:#059669;font-weight:700">${fmt$(w.amount||0)}${CFG.bdtMethods.includes(w.method)?` (৳${Math.round((parseFloat(w.amount)||0)*CFG.bdtRate).toLocaleString('en-US')})`:''}</span>
           </div>
           <div class="xs mu mt8">
             🗓 ${fmtD(w.created_at)} ·
