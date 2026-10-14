@@ -128,15 +128,26 @@ async function attachAppEvents(){
   if(S.page==='wallet'){
     const countryMethods=getMethodsForCountry();
     let selMethod=countryMethods[0]||'visa';
-    $$('[data-mth]').forEach(b=>{ b.classList.toggle('sel',b.dataset.mth===selMethod); b.onclick=()=>{
-      selMethod=b.dataset.mth; $$('[data-mth]').forEach(x=>x.classList.remove('sel')); b.classList.add('sel');
-    };});
+    const pickMethod=(m)=>{
+      selMethod=m;
+      $$('[data-mth]').forEach(x=>x.classList.toggle('sel',x.dataset.mth===m));
+      hxWdApply(m);
+    };
+    $$('[data-mth]').forEach(b=>{ b.onclick=()=>pickMethod(b.dataset.mth); });
+    pickMethod(selMethod);
+    hxWdBind();
     const wdBtn=$('#wdBtn');
     if(wdBtn) wdBtn.onclick=async()=>{
       if(wdBtn.disabled) return;
+      const r=hxWdCollect(selMethod);
+      if(!r.ok){
+        toast(r.err,'e',4500);
+        if(r.focus){ const fe=document.getElementById(r.focus); if(fe) fe.focus(); }
+        return;
+      }
       wdBtn.disabled=true; wdBtn.textContent=T('sging');
       try{
-        await submitWithdraw(selMethod,$('#wdAcc').value.trim(),$('#wdAmt').value);
+        await submitWithdraw(selMethod,r.account,r.usd);
       }catch(e){
         toast('Error: '+e.message,'e');
       }
@@ -890,15 +901,44 @@ async function clearCommunityVideo(){
 // ═══════════════════════════════════════════════════════
 
 // ── DARK MODE ──────────────────────────────────────────
-function initDarkMode(){
-  if(S.darkMode) document.body.classList.add('dark');
-}
-function toggleDarkMode(){
-  S.darkMode=!S.darkMode;
+function hxApplyTheme(){
+  S.darkMode = hxResolveDark(S.themeMode);
   document.body.classList.toggle('dark', S.darkMode);
-  localStorage.setItem('ez_dark', S.darkMode?'1':'0');
-  toast(S.darkMode?'🌙 Dark mode on':'☀️ Light mode on','s',2000);
+}
+let _hxThemeInit=false;
+function initDarkMode(){
+  hxApplyTheme();
+  if(_hxThemeInit) return;
+  _hxThemeInit=true;
+  // System মোডে থাকলে ফোনের mode বদলালে অ্যাপও সাথে সাথে বদলাবে
+  try{
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = ()=>{
+      if(S.themeMode!=='system') return;
+      const was = S.darkMode;
+      hxApplyTheme();
+      if(was!==S.darkMode) render();
+    };
+    if(mq.addEventListener) mq.addEventListener('change', onChange);
+    else if(mq.addListener) mq.addListener(onChange);
+  }catch(e){}
+}
+// অ্যাপ খোলার সাথে সাথেই থিম বসাও — যাতে Login/Register পেজও Night/System মোডে ঠিকমতো দেখায়
+(function(){ const go=()=>{ try{ initDarkMode(); }catch(e){} };
+  if(document.body) go(); else document.addEventListener('DOMContentLoaded', go); })();
+function setThemeMode(m){
+  if(m!=='system' && m!=='light' && m!=='dark') return;
+  S.themeMode = m;
+  try{ localStorage.setItem('ez_theme', m); }catch(e){}
+  hxApplyTheme();
+  const key = m==='system' ? 'thmToastSystem' : m==='light' ? 'thmToastLight' : 'thmToastDark';
+  toast((m==='dark'?'🌙 ':m==='light'?'☀️ ':'📱 ')+T(key),'s',1800);
   render();
+}
+// উপরের চাঁদ/সূর্য বোতাম: System → Light → Night ঘুরে ঘুরে বদলায়
+function toggleDarkMode(){
+  const order=['system','light','dark'];
+  setThemeMode(order[(order.indexOf(S.themeMode)+1)%order.length]);
 }
 
 // ── PWA INSTALL ────────────────────────────────────────
