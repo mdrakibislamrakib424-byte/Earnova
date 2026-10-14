@@ -1348,3 +1348,108 @@ body.dark .hx-qzd.cur{background:#0f2f4f;color:#ffd88f;border-color:#dcae45;box-
 .ax-soc:active{transform:translateY(1px);box-shadow:0 1px 2px rgba(0,0,0,.25)}
 .ax-soc:disabled{opacity:.6;cursor:default}
 .ax-soc svg{flex:0 0 auto}
+
+/* ═══════════════════════════════════════════════════════════
+   UPDATE 8 — Login/Register রিডিজাইন (Home-এর রঙে, ছোট কার্ড)
+   ═══════════════════════════════════════════════════════════ */
+.ax{background:#f0f7ff;color:#0f172a;font-family:'DM Sans','Noto Sans Bengali',sans-serif;padding-bottom:22px}
+.ax-bar{background:linear-gradient(135deg,#2563eb,#1e40af);height:50px;box-shadow:0 2px 10px rgba(37,99,235,.28)}
+.ax-bar-t{font-size:18px;font-family:'DM Sans','Noto Sans Bengali',sans-serif}
+.ax-body{max-width:390px;padding:10px 16px 0}
+.ax-logo{width:58px;height:58px;border-radius:15px;margin:4px auto 2px;box-shadow:0 4px 12px rgba(15,23,42,.18)}
+.ax-brand{font-size:19px;color:#0f172a;margin-top:4px;font-family:'Syne','DM Sans',sans-serif;letter-spacing:.04em}
+.ax-tag{font-size:12.5px;font-style:normal;font-weight:500;color:#475569;margin:2px 0 10px}
+.ax-card{background:#fff;border:1.5px solid #dbeafe;border-radius:20px;padding:14px 14px 16px;box-shadow:0 3px 16px rgba(37,99,235,.09),0 1px 3px rgba(15,23,42,.05)}
+.ax-h1{font-size:18px;font-style:normal;color:#0f172a;margin:0 0 4px;font-family:'DM Sans','Noto Sans Bengali',sans-serif}
+.ax-p{font-size:13px;font-style:normal;font-weight:500;color:#475569;margin:0 4px 10px}
+.ax-p-note{color:#1e40af}
+.ax-lbl{text-align:left;font-size:12.5px;font-weight:700;color:#475569;margin:9px 2px 5px}
+.ax-f{background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:11px;min-height:40px;padding:0 12px;box-shadow:none;margin-bottom:2px;transition:border-color .15s,box-shadow .15s}
+.ax-f::after{display:none}
+.ax-f:focus-within{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.14);background:#fff}
+.ax-inp{font-size:14.5px;color:#0f172a;padding:8px 0}
+.ax-inp::placeholder{color:#94a3b8;opacity:1}
+.ax-chk{width:22px;height:22px;margin-left:10px;border:2px solid #94a3b8;border-radius:6px;background:#fff}
+.ax-chk:checked{background:#2563eb;border-color:#2563eb}
+.ax-chk:checked::after{left:6px;top:1px;width:5px;height:11px;border-color:#fff;border-width:0 2.5px 2.5px 0}
+.ax-actions{margin-top:12px}
+.ax-btn{width:100%;min-width:0;background:linear-gradient(135deg,#2563eb,#1e40af);border-radius:11px;padding:12px 18px;font-size:15.5px;font-weight:700;box-shadow:0 4px 14px rgba(37,99,235,.3);font-family:'DM Sans','Noto Sans Bengali',sans-serif}
+.ax-btn:active{box-shadow:0 2px 6px rgba(37,99,235,.3)}
+.ax-btn-w{background:#fff;color:#1e40af;border:1.5px solid #bfdbfe;box-shadow:none}
+.ax-btn-r{background:linear-gradient(135deg,#ef4444,#b91c1c);box-shadow:0 4px 14px rgba(185,28,28,.25)}
+.ax-promo{background:#eff6ff;border:1px dashed #93c5fd;border-radius:11px;padding:8px 10px;margin:10px 0 0;font-size:12.5px;font-style:normal;font-weight:600;color:#1e40af}
+.ax-or{margin:14px 4px 10px}
+.ax-or::before,.ax-or::after{background:#dbe3ee}
+.ax-or span{font-size:12.5px;font-style:normal;font-weight:600;color:#64748b}
+.ax-soc{border:1.5px solid #cbd5e1;border-radius:11px;min-height:42px;margin-bottom:0;font-size:14.5px;font-weight:700;color:#0f172a;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.ax-link{font-size:14px;color:#2563eb}
+.ax-link-w{color:#2563eb;font-size:13.5px}
+.ax-foot{margin-top:12px;font-size:14px;font-weight:600;color:#334155;padding:0 6px}
+.ax-legal{font-size:11.5px;font-weight:500;color:#64748b}
+.ax-legal a{color:#2563eb}
+.ax .cf-turnstile{margin:10px 0 0!important}
+
+/* Night mode — কার্বন পটভূমি + রুপালি কার্ড (বাকি পাতার মতো) */
+body.dark .ax{background:transparent;color:#d8dee5}
+body.dark .ax-bar{background:rgba(12,15,19,.96);border-bottom:1px solid #2a323b;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+body.dark .ax-brand{color:#e6ebf0}
+body.dark .ax-tag{color:#98a3ad}
+body.dark .ax-card{background:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,transparent 1px 3px),linear-gradient(135deg,#eef0f3 0%,#c3c9cf 40%,#e6e9ec 62%,#a9b1b9 100%);border-color:rgba(255,255,255,.75);box-shadow:0 4px 14px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.9)}
+body.dark .ax-h1{color:#101a24}
+body.dark .ax-p{color:#2b3946}
+body.dark .ax-lbl{color:#2b3946}
+body.dark .ax-f{background:#f6f8f9;border-color:#98a3ad}
+body.dark .ax-inp{color:#0f172a}
+body.dark .ax-promo{background:rgba(10,61,130,.1);border-color:#7c93b8;color:#0a3d82}
+body.dark .ax-or::before,body.dark .ax-or::after{background:#8d98a3}
+body.dark .ax-or span{color:#2b3946}
+body.dark .ax-soc{background:#f6f8f9;border-color:#98a3ad}
+body.dark .ax-link,body.dark .ax-link-w{color:#7fb0ff}
+body.dark .ax-card .ax-link{color:#0a3d82}
+body.dark .ax-foot{color:#d8dee5}
+body.dark .ax-legal{color:#98a3ad}
+body.dark .ax-legal a{color:#7fb0ff}
+body.dark .ax-btn-w{background:#f6f8f9;color:#0a3d82;border-color:#98a3ad}
+
+/* ═══════════════════════════════════════════════════════════
+   UPDATE 8 — সুন্দর বার্তা-কার্ড (error/info popup)
+   ═══════════════════════════════════════════════════════════ */
+.hx-am{position:fixed;inset:0;z-index:9400;display:flex;align-items:center;justify-content:center;padding:22px;background:rgba(8,12,20,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:hxamIn .18s ease-out}
+@keyframes hxamIn{from{opacity:0}to{opacity:1}}
+.hx-am-card{width:100%;max-width:340px;background:#fff;border-radius:22px;padding:22px 18px 16px;text-align:center;box-shadow:0 18px 50px rgba(8,12,20,.45);animation:hxamPop .22s cubic-bezier(.2,1.2,.4,1);font-family:'DM Sans','Noto Sans Bengali',sans-serif}
+@keyframes hxamPop{from{transform:translateY(10px) scale(.95);opacity:0}to{transform:none;opacity:1}}
+.hx-am-ic{width:54px;height:54px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center}
+.hx-am-ic svg{width:28px;height:28px}
+.hx-am-ic.error{background:#fee2e2;color:#dc2626}
+.hx-am-ic.warn{background:#fef3c7;color:#d97706}
+.hx-am-ic.info{background:#dbeafe;color:#2563eb}
+.hx-am-t{font-size:17px;font-weight:800;color:#0f172a;margin-bottom:6px;line-height:1.3}
+.hx-am-s{font-size:13.5px;line-height:1.55;color:#475569;margin-bottom:16px}
+.hx-am-b{display:block;width:100%;border:0;border-radius:12px;padding:12px 14px;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#2563eb,#1e40af);color:#fff;box-shadow:0 4px 14px rgba(37,99,235,.3)}
+.hx-am-b2{display:block;width:100%;border:0;background:none;padding:11px 14px 2px;font-size:13.5px;font-weight:700;font-family:inherit;color:#64748b;cursor:pointer}
+body.dark .hx-am-card{background:repeating-linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,transparent 1px 3px),linear-gradient(135deg,#eef0f3 0%,#c3c9cf 40%,#e6e9ec 62%,#a9b1b9 100%);border:1px solid rgba(255,255,255,.75)}
+body.dark .hx-am-t{color:#101a24}
+body.dark .hx-am-s{color:#2b3946}
+body.dark .hx-am-b2{color:#2b3946}
+
+/* ═══════════════════════════════════════════════════════════
+   UPDATE 8 — থিম সিলেক্টর (সাইডবার) + Withdraw পাতা
+   ═══════════════════════════════════════════════════════════ */
+.hx-thm{display:flex;gap:4px;padding:3px;border-radius:12px;background:rgba(255,255,255,.07);margin:2px 0 4px}
+.hx-thm button{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;border:0;background:none;color:inherit;opacity:.72;font-size:11.5px;font-weight:700;padding:8px 4px;border-radius:9px;cursor:pointer;font-family:inherit}
+.hx-thm button.on{opacity:1;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)}
+.hx-thm svg{flex:0 0 auto}
+.hx-thm-lb{font-size:11px;font-weight:700;opacity:.6;text-transform:uppercase;letter-spacing:.08em;padding:6px 4px 4px}
+
+.mb2{position:relative}
+.mb2.sel{border:2px solid #2563eb;background:#dbeafe;color:#1e3a8a;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.mb2.sel::after{content:'✓';position:absolute;top:5px;right:7px;width:17px;height:17px;border-radius:50%;background:#2563eb;color:#fff;font-size:11px;font-weight:800;line-height:17px;text-align:center}
+body.dark .mb2.sel{background:linear-gradient(135deg,#0a3d82,#0f8f8a);border:2px solid #fff;color:#fff;box-shadow:0 0 0 3px rgba(127,176,255,.45),0 4px 12px rgba(0,0,0,.5)}
+body.dark .mb2.sel .method-name-txt{color:#fff}
+body.dark .mb2.sel::after{background:#fff;color:#0a3d82}
+.wd-conv{margin:-6px 2px 12px;font-size:12.5px;font-weight:600;color:#475569;line-height:1.5}
+.wd-conv b{color:#059669}
+.wd-hint{margin:-6px 2px 12px;font-size:12px;color:#64748b;line-height:1.5}
+body.dark .wd-conv,body.dark .wd-hint{color:#2b3946}
+body.dark .wd-conv b{color:#066a4a}
+.wd-bdt{font-size:12px;color:#c4cfdc;margin-top:2px}
