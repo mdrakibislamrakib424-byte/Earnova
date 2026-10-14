@@ -105,14 +105,14 @@ async function doRegister(name,email,pw,refCode,captchaToken){
   const usersSnap=await fDB.ref('users').orderByChild('device_id').equalTo(devId).once('value');
   const devUsers=usersSnap.val()||{};
   if(Object.keys(devUsers).length>=CFG.maxDevAcc){
-    toast(T('mx'),'e'); return;
+    if(typeof hxShowDevLimit==='function') hxShowDevLimit(); else toast(T('mx'),'e'); return;
   }
   // Email duplicate check — Supabase এ আগে থেকে আছে কিনা
   try{
     const {data:existCheck} = await sb.from('users')
       .select('id').eq('email', email.toLowerCase().trim()).maybeSingle();
     if(existCheck){
-      toast(T('emailAlreadyRegistered'),'e',5000); return;
+      if(typeof hxShowAcctExists==='function') hxShowAcctExists(T('amExistsS')); else toast(T('emailAlreadyRegistered'),'e',5000); return;
     }
   }catch(e){ /* continue — Supabase Auth নিজেই ধরবে */ }
   // Ref code validation
@@ -227,7 +227,7 @@ render();
     console.error('Register error:', e);
     const msg = e.message||'';
     if(msg.includes('already registered')||msg.includes('already exists')||msg.includes('duplicate')||msg.includes('unique')){
-      toast(T('emailAlreadyRegistered'),'e',5000);
+      if(typeof hxShowAcctExists==='function') hxShowAcctExists(T('amExistsS')); else toast(T('emailAlreadyRegistered'),'e',5000);
     } else if(msg.includes('password')){
       toast(T('pwMin6Toast'),'e');
     } else {
@@ -290,7 +290,14 @@ async function doLogin(email,pw,captchaToken){
     await completeUserLogin(u);
   }catch(e){
     console.error('Login error:', e);
-    toast(T('wp'),'e');
+    const em=String(e&&e.message||'');
+    if(navigator.onLine===false||/network|fetch|timeout/i.test(em)){
+      if(typeof hxAuthMsg==='function') hxAuthMsg({kind:'warn',title:T('amNetT'),text:T('amNetS'),btn:T('amOk')}); else toast(T('amNetS'),'e');
+    } else if(/captcha/i.test(em)){
+      toast(T('amCaptchaS'),'e',5000);
+    } else if(typeof hxAuthMsg==='function'){
+      hxAuthMsg({kind:'error',title:T('amWrongT'),text:T('amWrongS'),btn:T('amOk'),btn2:T('fp'),onBtn2:()=>{try{S.page='forgot';render();}catch(_){}}});
+    } else toast(T('wp'),'e');
   }
 }
 
@@ -415,7 +422,7 @@ async function signInWithGoogle(mode){
       if(mode === 'register'){
         // আগে থেকেই অ্যাকাউন্ট আছে — নতুন বানানো/লগইন না করে জানিয়ে দেওয়া
         await _googleQuietSignOut();
-        toast(T('gAcctExists'),'e',5000);
+        if(typeof hxShowAcctExists==='function') hxShowAcctExists(T('amExistsS')); else toast(T('gAcctExists'),'e',5000);
         return;
       }
       trackEvent('sign_up_or_login', { method:'google' });
@@ -428,7 +435,7 @@ async function signInWithGoogle(mode){
     try{ devCount = await _deviceAccountCount(); }catch(e){ console.warn('Device count check failed:', e); }
     if(devCount >= CFG.maxDevAcc){
       await _googleQuietSignOut();
-      toast(T('mx'),'e',5000);
+      if(typeof hxShowDevLimit==='function') hxShowDevLimit(); else toast(T('mx'),'e',5000);
       return;
     }
 
@@ -440,9 +447,8 @@ async function signInWithGoogle(mode){
     const msg = String(e?.message || e?.code || e || '').toLowerCase();
     // ইউজার নিজে বাতিল করলে এরর দেখানো হবে না
     if(/cancel|dismiss|closed|12501/.test(msg)) return;
-    // ⚠️ সমস্যা ধরার জন্য আসল কারণটা বার্তার শেষে দেখানো হচ্ছে (ঠিক হয়ে গেলে এই অংশ সরানো যাবে)
-    const detail = String(e?.message || e?.code || e || '').replace(/\s+/g,' ').slice(0,140);
-    toast(T('socialLoginFailedMsg') + (detail ? ' [' + detail + ']' : ''),'e',9000);
+    if(typeof hxAuthMsg==='function') hxAuthMsg({kind:'error',title:T('amFailT'),text:T('amFailS'),btn:T('amRetry'),onBtn:()=>signInWithGoogle(mode),btn2:T('amOk')});
+    else toast(T('socialLoginFailedMsg'),'e',5000);
   }finally{
     _googleBusy = false;
     const b = document.getElementById('socGoogleBtn');
