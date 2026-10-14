@@ -340,6 +340,17 @@ const CFG = {
   get minUSD(){ return parseInt(localStorage.getItem('ez_minUSD')||'12'); },
   get minRefs(){ return parseInt(localStorage.getItem('ez_minRefs')||'5'); },
   maxDevAcc:2,
+  // bKash/Nagad: ইউজার টাকায় amount দেয়, ডলারে রূপান্তর হয় (১ ডলার = bdtRate টাকা)
+  get bdtRate(){ return parseFloat(localStorage.getItem('ez_bdtRate')||'110') || 110; },
+  bdtMethods:['bkash','nagad'],
+  // পেমেন্ট পদ্ধতি অনুযায়ী কোন তথ্য চাওয়া হবে (ফর্মের ধরন)
+  payFields:{
+    bkash:{type:'phone'}, nagad:{type:'phone'},
+    binance:{type:'binance'},
+    wise:{type:'email'}, payoneer:{type:'email'}, paypal:{type:'email'},
+    usdt:{type:'trc20'},
+    visa:{type:'card'},
+  },
   // 🪪 এই পরিমাণের বেশি withdraw করতে গেলে KYC (identity verification)
   // approved থাকা লাগবে — জালিয়াতি/মানি-লন্ডারিং রোধে ছোট withdraw-এ
   // বাধ্যতামূলক না রেখে শুধু বড় অঙ্কে verification চাওয়া হচ্ছে
