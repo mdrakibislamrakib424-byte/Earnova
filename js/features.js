@@ -22,96 +22,67 @@ function getUserLevel(totalEarned){
   return      {name:'Bronze',icon:'🥉',color:'#b45309',next:10,progress:Math.round(e*10),cls:'lv-bronze'};
 }
 
+// ── সার্ভার-সাইড পুরস্কার: ছোট সহায়ক ফাংশন ──────────────
+// পুরস্কারের হিসাব (কত টাকা, আজ পেয়েছে কি না) এখন Supabase সার্ভারে হয়; ফোন শুধু ফলাফল দেখায়।
+function ezUtcDay(){ return new Date().toISOString().slice(0,10); }          // সার্ভারের তারিখের ধরন (UTC)
+function ezIsToday(v){ return !!v && (v===new Date().toDateString() || v===ezUtcDay()); }  // নতুন ও পুরোনো দুই ধরনের তারিখ চেনে
+function ezApplyLocalReward(amt){
+  // সার্ভারে ইতিমধ্যে জমা হয়েছে; এটা শুধু স্ক্রিনের সংখ্যা সাথে সাথে বদলায় (realtime পরে আসল মান বসাবে)
+  amt = parseFloat(amt)||0;
+  if(!S.userData || !(amt>0)) return;
+  S.userData.usdEarned = (parseFloat(S.userData.usdEarned)||0) + amt;
+  const t = new Date().toDateString();
+  S.userData.todayEarned = (S.userData.todayDate===t ? (parseFloat(S.userData.todayEarned)||0) : 0) + amt;
+  S.userData.todayDate = t;
+  try{ EZCache.invalidate(`users/${S.user?.uid}`); }catch(e){}
+}
+
 // ── STREAK SYSTEM ──────────────────────────────────────
 function getStreakData(ud){
   const today=new Date().toDateString();
   const lastLogin=ud.lastLoginDate||'';
-  const yesterday=new Date(Date.now()-86400000).toDateString();
   let streak=parseInt(ud.loginStreak||0);
-  // If logged in yesterday → streak continues; if today already counted → same
-  // Streak update happens on login
   return {streak, today, lastLogin};
 }
 
 async function updateLoginStreak(uid, ud){
-  const today=new Date().toDateString();
-  if(ud.lastLoginDate===today) return; // already counted today
-  const yesterday=new Date(Date.now()-86400000).toDateString();
-  let streak=parseInt(ud.loginStreak||0);
-  if(ud.lastLoginDate===yesterday){
-    streak+=1;
-  } else if(ud.lastLoginDate!==today){
-    streak=1; // reset
-  }
-  await fDB.ref(`users/${uid}`).update({loginStreak:streak, lastLoginDate:today});
-  // Streak bonus
-  if(streak>0 && streak%7===0){
-    const bonus=0.05;
-    await atomicIncrement(uid,'usdEarned',bonus);
-    toast(`🔥 7-day streak! +$${bonus.toFixed(2)} bonus!`,'s',4000);
-    sendLocalNotif('🔥 Streak Bonus!',`7-day streak! You earned +$${bonus.toFixed(2)}`);
-  } else if(streak>1){
-    toast(`🔥 ${streak}-day streak! Keep it up!`,'s',3000);
-  }
-}
-
-// ── আজকের আয় (today_earned) আপডেট — Daily Bonus ও Spin এর জন্য ──
-// admin.js এর approveSubmission এর মতোই একই নিয়ম: একই দিন হলে atomic
-// increment, নতুন দিন হলে today_earned রিসেট করে নতুন মান + today_date বসানো।
-async function addTodayEarned(uid, amount){
+  if(ezIsToday(ud.lastLoginDate)) return; // আজ ইতিমধ্যে গোনা হয়েছে
   try{
-    const amt = parseFloat(amount)||0;
-    if(!uid || amt<=0) return;
-    const today = new Date().toDateString();
-    const {data:row} = await sb.from('users').select('today_date').eq('id',uid).maybeSingle();
-    if((row?.today_date||'') === today){
-      await atomicIncrement(uid,'todayEarned',amt); // DB + লোকাল S.userData দুটোই
-    } else {
-      await sb.from('users').update({ today_earned: amt, today_date: today }).eq('id',uid);
-      if(S.userData && S.user?.uid===uid){
-        S.userData.todayEarned = amt;
-        S.userData.todayDate = today;
-      }
-      EZCache.invalidate(`users/${uid}`);
+    const { data, error } = await sb.rpc('claim_login_streak', { p_client_today: new Date().toDateString() });
+    if(error || !data || !data.counted) return;
+    const streak = parseInt(data.streak||0), bonus = parseFloat(data.bonus||0);
+    if(S.userData){ S.userData.loginStreak = streak; S.userData.lastLoginDate = ezUtcDay(); }
+    if(bonus>0){
+      ezApplyLocalReward(bonus);
+      toast(`🔥 7-day streak! +$${bonus.toFixed(2)} bonus!`,'s',4000);
+      sendLocalNotif('🔥 Streak Bonus!',`7-day streak! You earned +$${bonus.toFixed(2)}`);
+    } else if(streak>1){
+      toast(`🔥 ${streak}-day streak! Keep it up!`,'s',3000);
     }
-  }catch(e){ /* silent — মূল balance আগেই ক্রেডিট হয়ে গেছে */ }
+  }catch(e){ /* পরের বার আবার চেষ্টা হবে */ }
 }
 
 // ── DAILY LOGIN BONUS ──────────────────────────────────
 async function checkDailyBonus(uid, ud){
-  const today=new Date().toDateString();
-  if(ud.dailyBonusDate===today) return; // already claimed (দ্রুত ক্লায়েন্ট-সাইড চেক, প্রথম ফিল্টার)
-  const bonus=0.01; // $0.01 daily login bonus
-  // ⚠️ ফিক্স: আগে সরাসরি ক্রেডিট করে দেওয়া হতো, শুধু উপরের ক্লায়েন্ট-সাইড
-  // চেকের ওপর ভরসা করে — একই ইউজার ২টা ডিভাইস থেকে প্রায় একসাথে App
-  // খুললে দুইবার bonus পেয়ে যেতে পারত। এখন আগে atomically claim করা
-  // হচ্ছে, সফল হলেই শুধু balance ক্রেডিট হবে।
+  if(ezIsToday(ud.dailyBonusDate)) return; // দ্রুত চেক: আজ ইতিমধ্যে নেওয়া হয়েছে
   try{
-    const { data: claimed, error: claimErr } = await sb.rpc('atomic_claim_daily', {
-      p_table: 'users', p_id: uid, p_field: 'daily_bonus_date', p_today: today,
-    });
-    if(claimErr){
-      // RPC না থাকলে পুরনো (কম-নিরাপদ) পদ্ধতিতেই এগোনো — অন্তত ফিচারটা কাজ করুক
-      await atomicIncrement(uid,'usdEarned',bonus);
-      await fDB.ref(`users/${uid}/dailyBonusDate`).set(today);
-    } else if(!claimed){
-      return; // অন্য ডিভাইস থেকে আজ ইতিমধ্যে claim হয়ে গেছে
-    } else {
-      await atomicIncrement(uid,'usdEarned',bonus);
-    }
-  }catch(e){ return; }
-  await addTodayEarned(uid, bonus);
-  if(S.userData) S.userData.dailyBonusDate = today;
-  toast(`🎁 Daily Login Bonus: +$${bonus.toFixed(2)}!`,'s',3500);
-  sendLocalNotif('🎁 Daily Bonus!',`You earned $${bonus.toFixed(2)} for logging in today!`);
+    // দিনে একবার + অঙ্ক — দুটোই সার্ভারে ঠিক হয় (দুই ডিভাইস থেকে একসাথে খুললেও একবারই)
+    const { data, error } = await sb.rpc('claim_daily_bonus', { p_client_today: new Date().toDateString() });
+    if(error) return;
+    if(S.userData) S.userData.dailyBonusDate = ezUtcDay();
+    const bonus = parseFloat(data||0);
+    if(!(bonus>0)) return;
+    ezApplyLocalReward(bonus);
+    toast(`🎁 Daily Login Bonus: +$${bonus.toFixed(2)}!`,'s',3500);
+    sendLocalNotif('🎁 Daily Bonus!',`You earned $${bonus.toFixed(2)} for logging in today!`);
+  }catch(e){ /* পরের বার আবার চেষ্টা হবে */ }
 }
 
 // ══════════════════════════════════════════════════════════
 // 🎡 DAILY SPIN WHEEL — প্রতিদিন একবার ঘুরিয়ে র‍্যান্ডম বোনাস
 // ══════════════════════════════════════════════════════════
 function canSpinToday(ud){
-  const today=new Date().toDateString();
-  return (ud?.lastSpinDate||'') !== today;
+  return !ezIsToday(ud?.lastSpinDate);
 }
 
 // ── Home পেজের ছোট কার্ড — স্পিন করা যাবে কিনা দেখায় ──
@@ -187,52 +158,38 @@ async function doSpin(){
   if(!canSpinToday(ud)){ toast('✅ আজকের স্পিন হয়ে গেছে','i'); return; }
   _spinning = true;
 
-  // ⚠️ ফিক্স: আগে শুধু S.userData (ক্লায়েন্ট-সাইড ক্যাশ) দেখে "আজ স্পিন
-  // করেছি কিনা" ধরে নেওয়া হতো — একই ইউজার ২টা ডিভাইস/ট্যাব থেকে প্রায়
-  // একসাথে স্পিন করলে দুটোই সফল হয়ে যেত (দুই জায়গার balance ২ বার
-  // ক্রেডিট)। এখন spin শুরু করার আগেই Postgres-এ atomically claim করা
-  // হচ্ছে — এটা ব্যর্থ হলে বুঝব অন্য কোনো ডিভাইস/ট্যাব থেকে ইতিমধ্যে
-  // আজকের স্পিন হয়ে গেছে, তাই এখানে থেমে যাওয়া হচ্ছে (কোনো animation/reward ছাড়াই)।
-  const today = new Date().toDateString();
+  // কোন পুরস্কার আসবে + দিনে একবার + ব্যালেন্সে যোগ — সবই সার্ভার (claim_spin) করে।
+  // ফোন শুধু সার্ভারের দেওয়া ফলাফলে চাকা ঘোরায়, তাই পুরস্কার বদলানো যায় না।
+  let res = null;
   try{
-    const { data: claimed, error: claimErr } = await sb.rpc('atomic_claim_daily', {
-      p_table: 'users', p_id: S.user.uid, p_field: 'last_spin_date', p_today: today,
-    });
-    if(claimErr){
-      // RPC না থাকলে (পুরনো Supabase সেটআপ) — অন্তত fresh read করে চেষ্টা
-      const {data:freshUd} = await sb.from('users').select('last_spin_date').eq('id',S.user.uid).single();
-      if(freshUd?.last_spin_date === today){
-        toast('✅ আজকের স্পিন হয়ে গেছে','i'); _spinning=false; return;
-      }
-    } else if(!claimed){
-      toast('✅ আজকের স্পিন হয়ে গেছে (অন্য ডিভাইস থেকে করা হয়েছে)','i');
-      if(S.userData) S.userData.lastSpinDate = today;
-      _spinning = false;
-      return;
-    }
+    const { data, error } = await sb.rpc('claim_spin', { p_client_today: new Date().toDateString() });
+    if(error) throw error;
+    res = data;
   }catch(e){
     toast('⚠️ Spin এ সমস্যা হয়েছে, আবার চেষ্টা করুন','w'); _spinning=false; return;
   }
+  if(!res){
+    toast('✅ আজকের স্পিন হয়ে গেছে','i');
+    if(S.userData) S.userData.lastSpinDate = ezUtcDay();
+    _spinning = false;
+    return;
+  }
 
   const btn=document.getElementById('spinNowBtn'); if(btn) btn.disabled=true;
-  const prizeIdx = pickWeightedPrize();
-  const prize = CFG.spinPrizes[prizeIdx];
+  const prizeIdx = Math.max(0, Math.min(CFG.spinPrizes.length-1, parseInt(res.idx)||0));
+  const prize = { amount: (parseFloat(res.amount) || CFG.spinPrizes[prizeIdx].amount) };
   const seg = 360/CFG.spinPrizes.length;
 
   // যে সেগমেন্টে পয়েন্টার (উপরে, 0deg) গিয়ে থামবে সেটা যেন prizeIdx হয় —
-  // তাই চাকাকে এমনভাবে ঘোরানো হচ্ছে যাতে সেই সেগমেন্টের মাঝামাঝি অংশ ঠিক
-  // পয়েন্টারের নিচে আসে। কয়েক পাক (৫-৮ বার) ঘুরিয়ে বাস্তবসম্মত দেখানো হচ্ছে।
+  // কয়েক পাক (৫-৮ বার) ঘুরিয়ে বাস্তবসম্মত দেখানো হচ্ছে
   const targetAngle = 360*6 + (360 - (prizeIdx*seg + seg/2));
   const disc = document.getElementById('spinWheelDisc');
   if(disc) disc.style.transform = `rotate(${targetAngle}deg)`;
 
-  setTimeout(async ()=>{
+  setTimeout(()=>{
     try{
-      await atomicIncrement(S.user.uid, 'usdEarned', prize.amount);
-      await addTodayEarned(S.user.uid, prize.amount);
-      // lastSpinDate ইতিমধ্যে atomic_claim_spin দিয়ে সেট হয়ে গেছে উপরেই —
-      // এখানে শুধু লোকাল S.userData ক্যাশ আপডেট করা হচ্ছে
-      if(S.userData) S.userData.lastSpinDate = today;
+      ezApplyLocalReward(prize.amount);   // সার্ভারে আগেই জমা হয়ে গেছে; এখানে শুধু স্ক্রিন আপডেট
+      if(S.userData) S.userData.lastSpinDate = ezUtcDay();
       const msgEl=document.getElementById('spinResultMsg');
       if(msgEl) msgEl.textContent = `🎉 You won $${prize.amount.toFixed(2)}!`;
       toast(`🎉 Spin Wheel: +$${prize.amount.toFixed(2)}!`,'s',4000);
@@ -244,7 +201,7 @@ async function doSpin(){
       toast('⚠️ Spin এ সমস্যা হয়েছে, আবার চেষ্টা করুন','w');
     }
     _spinning = false;
-  }, 4200); // চাকার animation (4s) শেষ হওয়ার একটু পরে reward দেওয়া হচ্ছে
+  }, 4200); // চাকার animation (4s) শেষ হওয়ার একটু পরে ফলাফল দেখানো হচ্ছে
 }
 
 // ── LEADERBOARD ────────────────────────────────────────
@@ -781,17 +738,17 @@ async function quizFinish(idx, val){
   const uid = S.user?.uid;
   const ok = (val === q.qs[idx].a) ? 1 : 0;
   try{
-    // প্রতিটা প্রশ্ন Postgres-এ atomically claim — একই প্রশ্নে দ্বিতীয়বার রিওয়ার্ড হয় না
-    const { data: claimed, error } = await sb.rpc('claim_quiz', { p_uid: uid, p_day: q.day, p_idx: idx, p_ok: ok });
+    // প্রতিটা প্রশ্ন একবারই claim হয়, আর সঠিক হলে পুরস্কারের অঙ্ক সার্ভার নিজে দেয়
+    const { data: r, error } = await sb.rpc('claim_quiz_reward', { p_day: q.day, p_idx: idx, p_ok: ok });
     if(error){ q.err='setup'; q.busy=false; render(); return; }
-    if(!claimed){ // অন্য ডিভাইস থেকে আগেই জমা হয়েছে — নতুন করে লোড
+    if(!r || !r.claimed){ // অন্য ডিভাইস থেকে আগেই জমা হয়েছে — নতুন করে লোড
       S.quiz = null; q.busy=false; quizInit(); toast(T('qzAlready'),'i'); return;
     }
     q.prog[idx] = ok;
     if(ok){
-      await atomicIncrement(uid, 'usdEarned', CFG.quizReward);
-      await addTodayEarned(uid, CFG.quizReward);
-      toast('✅ '+T('qzRight')+' +'+fmt$(CFG.quizReward),'s',3200);
+      const rw = parseFloat(r.reward||0);
+      ezApplyLocalReward(rw);
+      toast('✅ '+T('qzRight')+' +'+fmt$(rw),'s',3200);
     } else {
       toast('❌ '+T('qzWrong'),'e',3200);
     }
