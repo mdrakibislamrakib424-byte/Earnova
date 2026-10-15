@@ -839,13 +839,10 @@ async function submitTaskProof(taskId){
     slotClaimedAtomically = false;
 
     // ── current_workers আপডেট ────────────────────────
-    if(maxW > 0){
-      if(newCur >= maxW){
-        await sb.from('social_tasks').update({status:'disabled'}).eq('id',taskId);
-      }
-    } else {
-      const curWUnlimited = parseInt(taskData.current_workers||0);
-      await sb.from('social_tasks').update({current_workers: curWUnlimited + 1}).eq('id',taskId);
+    // সীমিত সিটের টাস্কে সিট ভরে গেলে সার্ভার (atomic_claim_slot) নিজেই টাস্ক "disabled" করে দেয়।
+    // সীমাহীন টাস্কে শুধু কর্মী-সংখ্যা এক বাড়ে (সরাসরি টেবিলে লেখা এখন বন্ধ, তাই RPC দিয়ে)।
+    if(!(maxW > 0)){
+      try{ await sb.rpc('atomic_increment', { p_table:'social_tasks', p_id:taskId, p_field:'current_workers', p_delta:1 }); }catch(eInc){}
     }
     EZCache.invalidate('socialTasks');
 
