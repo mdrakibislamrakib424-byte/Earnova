@@ -178,35 +178,17 @@ async function doRegister(name,email,pw,refCode,captchaToken){
     const {error: insertErr} = await sb.from('users').upsert(userData, {onConflict:'id'});
     if(insertErr){
       console.error('User insert error:', insertErr);
+      // সার্ভারও ডিভাইস লিমিট চেক করে (DEVICE_LIMIT) — একই বার্তা দেখাও
+      if(String(insertErr.message||'').includes('DEVICE_LIMIT')){
+        try{ await sb.auth.signOut(); }catch(_){}
+        if(typeof hxShowDevLimit==='function') hxShowDevLimit(); else toast(T('mx'),'e',5000);
+        return;
+      }
       toast(insertErr.message,'e'); return;
     }
-    // ⚠️ ফিক্স: এখানে কমেন্টে "Atomic counter" লেখা থাকলেও আসল কোড ছিল
-    // "read করে তারপর write" — এটা প্রকৃতপক্ষে atomic ছিলই না। অনেকজন
-    // ইউজার একসাথে/কাছাকাছি সময়ে register করলে (যেমন কোনো campaign চলাকালীন)
-    // একাধিক increment হারিয়ে যেতে পারত (classic race condition) — মানে
-    // ৫০ জন register করলেও counter হয়তো ৩৫/৪০ দেখাতো। এখন সেই একই
-    // atomic_increment RPC ব্যবহার করা হচ্ছে যেটা balance/total_paid_out-এও
-    // ব্যবহার হয় — সত্যিকারের database-level atomic অপারেশন, একসাথে হাজার
-    // জন register করলেও একটাও হারাবে না।
-    try{
-      const {error:rpcErr} = await sb.rpc('atomic_increment', {
-        p_table:'stats', p_id:'stats', p_field:'total_users', p_delta:1
-      });
-      if(rpcErr){
-        // RPC না থাকলে ফলব্যাক (কম নিরাপদ, কিন্তু কাজ চালানোর জন্য যথেষ্ট)
-        const {data:stData} = await sb.from('stats').select('total_users').eq('id','stats').maybeSingle();
-        const curTotal = stData?.total_users||0;
-        await sb.from('stats').upsert({id:'stats', total_users: curTotal+1}, {onConflict:'id'});
-      }
-    }catch(e){ /* counter fail হলেও registration আটকাবে না */ }
-    // Referral bonus
-    if(refByUid){
-      const refSnap = await sb.from('users').select('usd_earned').eq('id',refByUid).maybeSingle();
-      await atomicIncrement(refByUid,'usdEarned',CFG.refBonus);
-      await atomicIncrement(refByUid,'referralEarned',CFG.refBonus); // ← referral tracking
-      await atomicIncrement(refByUid,'activeReferrals',1);
-      trackEvent('referral_success', { referrer_uid: refByUid });
-    }
+    // মোট সদস্য গোনা ও রেফারেল বোনাস এখন সার্ভার নিজে করে (users টেবিলের trigger):
+    // নতুন সারি তৈরি হলেই total_users বাড়ে, আর রেফারার থাকলে একবারই বোনাস যায়।
+    if(refByUid){ trackEvent('referral_success', { referrer_uid: refByUid }); }
     EZCache.invalidateAll();
     trackEvent('sign_up', { method:'email', country: S.country||'' });
 toast(T('rs'),'s');
@@ -361,20 +343,8 @@ async function ensureUserRecord(u, extraName){
   const {error:insertErr} = await sb.from('users').upsert(userData, {onConflict:'id'});
   if(insertErr){ console.error('Social user insert error:', insertErr); throw insertErr; }
 
-  try{
-    const {error:rpcErr} = await sb.rpc('atomic_increment', { p_table:'stats', p_id:'stats', p_field:'total_users', p_delta:1 });
-    if(rpcErr){
-      const {data:stData} = await sb.from('stats').select('total_users').eq('id','stats').maybeSingle();
-      await sb.from('stats').upsert({id:'stats', total_users:(stData?.total_users||0)+1}, {onConflict:'id'});
-    }
-  }catch(e){ /* counter fail হলেও লগইন আটকাবে না */ }
-
-  if(refByUid){
-    await atomicIncrement(refByUid,'usdEarned',CFG.refBonus);
-    await atomicIncrement(refByUid,'referralEarned',CFG.refBonus);
-    await atomicIncrement(refByUid,'activeReferrals',1);
-    trackEvent('referral_success', { referrer_uid: refByUid });
-  }
+  // মোট সদস্য গোনা ও রেফারেল বোনাস সার্ভার নিজে করে (users টেবিলের trigger)
+  if(refByUid){ trackEvent('referral_success', { referrer_uid: refByUid }); }
   EZCache.invalidateAll();
   return await loadUserData(u.id);
 }
@@ -447,6 +417,11 @@ async function signInWithGoogle(mode){
     const msg = String(e?.message || e?.code || e || '').toLowerCase();
     // ইউজার নিজে বাতিল করলে এরর দেখানো হবে না
     if(/cancel|dismiss|closed|12501/.test(msg)) return;
+    if(/device_limit/.test(msg)){
+      await _googleQuietSignOut();
+      if(typeof hxShowDevLimit==='function') hxShowDevLimit(); else toast(T('mx'),'e',5000);
+      return;
+    }
     if(typeof hxAuthMsg==='function') hxAuthMsg({kind:'error',title:T('amFailT'),text:T('amFailS'),btn:T('amRetry'),onBtn:()=>signInWithGoogle(mode),btn2:T('amOk')});
     else toast(T('socialLoginFailedMsg'),'e',5000);
   }finally{
@@ -655,89 +630,40 @@ async function submitWithdraw(method,account,amount){
   if((ud.usdEarned||0)<usd){
     toast(T('wf'),'e'); return;
   }
-  const wid = crypto.randomUUID ? crypto.randomUUID() : ('wd_'+Date.now()+'_'+Math.random().toString(36).slice(2,8));
-  // ⚠️ ফিক্স: এই primitive সংখ্যাটা এখনই (deduct হওয়ার আগেই) আলাদা করে
-  // রাখা হচ্ছে — কারণ `ud` আসলে `S.userData`-এরই reference (কপি না),
-  // নিচে RPC সফল হওয়ার পর `S.userData.usdEarned` বদলে গেলে `ud.usdEarned`ও
-  // সাথে সাথেই বদলে যাবে (একই অবজেক্ট)। withdraw-এর *আগের* আসল balance
-  // দরকার নিচের referral-ratio হিসাবের জন্য, তাই এই primitive number-এ
-  // এখনই স্ন্যাপশট নেওয়া হলো।
-  const preWithdrawBal = parseFloat(ud.usdEarned||0);
-
   // ══════════════════════════════════════════════════════════
-  // ⚠️ গুরুত্বপূর্ণ ফিক্স — Double-Spend Race Condition
+  // 🛡️ Withdraw এখন পুরোপুরি সার্ভারে (request_withdraw)
   // ══════════════════════════════════════════════════════════
-  // আগে এখানে ২ ধাপে হতো: (১) "fresh balance" আলাদা করে পড়া, (২) তারপর
-  // আলাদা .update() দিয়ে বিয়োগ করা। এই দুইয়ের মাঝের ফাঁকে যদি কেউ Withdraw
-  // বাটনে দ্রুত ২ বার চাপে (বা কেউ ইচ্ছাকৃতভাবে ২টা রিকোয়েস্ট একসাথে
-  // পাঠায়), দুটোই একই মুহূর্তে "balance যথেষ্ট আছে" দেখতে পেত (দ্বিতীয়টা
-  // প্রথমটার বিয়োগ তখনও দেখেনি) — ফলে $50 balance থাকলেও ২টা আলাদা $50
-  // withdrawal request তৈরি হয়ে যেতে পারত, টাকা বাস্তবে একবারই থাকলেও।
-  //
-  // এখন একটা একক atomic SQL অপারেশন (atomic_withdraw_deduct RPC) ব্যবহার
-  // হচ্ছে — এটা Postgres-এর একটাই UPDATE স্টেটমেন্টে balance-চেক ও বিয়োগ
-  // একসাথে করে (WHERE usd_earned >= amount)। Postgres নিজেই নিশ্চিত করে
-  // এই ধরনের UPDATE একসাথে দুইজনের জন্য সফল হতে পারে না — দ্বিতীয় রিকোয়েস্ট
-  // স্বয়ংক্রিয়ভাবে "insufficient balance" এরর পাবে, ম্যানুয়াল চেকের ওপর
-  // নির্ভর করতে হয় না।
-  const { data: newBalResult, error: deductErr } = await sb.rpc('atomic_withdraw_deduct', {
-    p_uid: S.user.uid, p_amount: usd,
+  // নিয়ম-যাচাই (কমপক্ষে কত, রেফারেল সংখ্যা, KYC, ২৪ ঘণ্টা), ব্যালেন্স কাটা আর
+  // অনুরোধ সেভ — সব এক সাথে এক লেনদেনে হয়। ফোনের কোড বদলে এগুলো এড়ানো যায় না,
+  // আর দুইবার চাপলেও একটাই চলে। উপরের চেকগুলো শুধু দ্রুত বার্তা দেখানোর জন্য।
+  const { data: wr, error: wdErr } = await sb.rpc('request_withdraw', {
+    p_method: method, p_account: String(account).trim(), p_amount: usd,
   });
-  if(deductErr){
-    // RPC না থাকলে (পুরনো Supabase সেটআপ) নিরাপদ ফলব্যাক — অন্তত ডাবল
-    // রিকোয়েস্টের ঝুঁকি কিছুটা কমাতে fresh read করেই এগোনো হচ্ছে
-    const {data:freshData} = await sb.from('users').select('usd_earned').eq('id',S.user.uid).single();
-    const freshBal = parseFloat(freshData?.usd_earned||0);
-    if(freshBal < usd){ toast(T('insufficientBalanceMsg'),'e'); return; }
-    await sb.from('users').update({usd_earned: Math.max(0, freshBal-usd)}).eq('id', S.user.uid);
-    S.userData.usdEarned = Math.max(0, freshBal-usd);
-  } else if(newBalResult === null || newBalResult === undefined){
-    // RPC নিজেই "balance যথেষ্ট নেই" বলে জানালো (WHERE ক্লজ মেলেনি)
-    toast(T('insufficientBalanceMsg'),'e'); return;
-  } else {
-    S.userData.usdEarned = parseFloat(newBalResult);
+  if(wdErr){
+    console.error('request_withdraw error:', wdErr);
+    toast(T('wf'),'e'); return;
   }
-  // ⚠️ ফিক্স: আগে এখানে ভুলবশত `const freshBal = usd;` লেখা ছিল — মানে
-  // freshBal সবসময় ঠিক withdraw করা পরিমাণের সমান হতো, ফলে নিচের
-  // ratio = usd/freshBal সবসময় ঠিক 1 (=100%) হয়ে যেত, যত ছোট withdraw
-  // করা হোক না কেন। এর ফলে প্রতিটা withdraw-এই referral_earned সম্পূর্ণ
-  // শূন্য হয়ে যেত, যদিও withdraw করা হয়েছিল হয়তো মোট balance-এর সামান্য
-  // একটা অংশ মাত্র। এখন উপরে স্ন্যাপশট নেওয়া withdraw-এর *আগের* আসল
-  // balance (preWithdrawBal) ব্যবহার করা হচ্ছে, তাই ratio এখন সঠিকভাবে
-  // "মোট balance-এর কত অংশ withdraw করা হলো" প্রতিফলিত করে।
-  const freshBal = preWithdrawBal;
-
-  // Step 1b: referral_earned (টাকা) proportionally কাটো
-  // + activeReferrals count reset করো (পরের withdraw এর জন্য আবার referral আনতে হবে)
-  try{
-    const {data:refRow} = await sb.from('users').select('referral_earned').eq('id',S.user.uid).single();
-    const curRefEarned = parseFloat(refRow?.referral_earned||0);
-    if(curRefEarned > 0 && freshBal > 0){
-      const ratio = Math.min(1, usd / freshBal);
-      const refDeduct = parseFloat((curRefEarned * ratio).toFixed(6));
-      const newRefEarned = Math.max(0, curRefEarned - refDeduct);
-      await sb.from('users').update({
-        referral_earned: newRefEarned,
-        active_referrals: 0   // ← withdraw হলে referral count reset
-      }).eq('id', S.user.uid);
-      if(S.userData){
-        S.userData.referralEarned = newRefEarned;
-        S.userData.activeReferrals = 0;
-      }
-    } else {
-      // referral_earned না থাকলেও শুধু count reset করো
-      await sb.from('users').update({ active_referrals: 0 }).eq('id', S.user.uid);
-      if(S.userData) S.userData.activeReferrals = 0;
-    }
-  }catch(e){ /* silent — main balance already deducted */ }
-  // Step 2: Withdrawal request Supabase তে save করো
-  await sb.from('withdrawals').insert({
-    id:wid, uid:S.user.uid, user_email:ud.email||S.user.email, user_name:ud.name||'',
-    method, account, amount:usd, status:'pending',
-    created_at: Date.now(),
-  });
+  if(!wr || !wr.ok){
+    const c = wr && wr.code;
+    if(c==='REFS'){ toast(T('noWarn'),'w',5000); }
+    else if(c==='MIN' || c==='AMOUNT'){ toast(T('wf'),'e'); }
+    else if(c==='BALANCE'){ toast(T('insufficientBalanceMsg'),'e'); }
+    else if(c==='ACCOUNT' || c==='METHOD'){ toast(T('invalidAccountMsg'),'e'); }
+    else if(c==='KYC_PENDING'){ toast(`⏳ আপনার KYC যাচাই এখনও চলছে। অনুমোদন হলে $${CFG.kycThreshold}+ withdraw করতে পারবেন।`,'w',6000); }
+    else if(c==='KYC_REQUIRED'){ toast(`🪪 $${CFG.kycThreshold}+ withdraw করতে Identity Verification (KYC) লাগবে। Profile পেজ থেকে verify করুন।`,'w',6000); }
+    else if(c==='WAIT'){ toast(`Please wait ${wr.hours||24} more hour(s) before next withdrawal request.`,'w',5000); }
+    else if(c==='BANNED'){ toast(T('wf'),'e'); }
+    else { toast(T('wf'),'e'); }
+    return;
+  }
+  // সফল: স্ক্রিনের ব্যালেন্স সার্ভারের দেওয়া নতুন ব্যালেন্সে বসাও
+  if(S.userData){
+    S.userData.usdEarned = parseFloat(wr.balance);
+    S.userData.activeReferrals = 0;
+  }
+  EZCache.invalidate(`users/${S.user.uid}`);
   trackEvent('withdrawal_request', { amount: usd, method });
-  // Rate limit timestamp save
+  // Rate limit timestamp save (শুধু দ্রুত বার্তার জন্য; আসল ২৪ ঘণ্টার নিয়ম সার্ভারে)
   localStorage.setItem('ez_last_wd', Date.now().toString());
   // Show success message with payment timeline
   const app=document.getElementById('app');
@@ -1331,9 +1257,7 @@ async function checkActiveReferrals(){
     }
     if(isActive) active++;
   }
-  if(active!==(S.userData.activeReferrals||0)){
-    await fDB.ref(`users/${S.user.uid}/activeReferrals`).set(active);
-  }
+  // active_referrals এখন সার্ভার ঠিক রাখে (ব্যবহারকারী নিজে বদলাতে পারে না), তাই এখানে আর লেখা হয় না
 }
 
 // ─── MAIN RENDER ──────────────────────────────────────
