@@ -33,6 +33,17 @@ function el(tag,cls,html='',attrs={}){
 //     নতুন ট্যাবে খোলে এবং App-এর ট্যাব হারিয়ে না যায়।
 function openLink(url){
   if(!url) return;
+  url = String(url).trim();
+  // ⚠️ নিরাপত্তা: শুধু অ্যাপের নিজের পেজ (terms.html), http(s), mailto, tel খোলা যাবে।
+  // javascript: / intent: / file: / data: ইত্যাদি বন্ধ। ব্রাউজার স্কিমের ভেতরের ট্যাব/নতুন-লাইন
+  // উপেক্ষা করে ("java\tscript:" = javascript:), তাই চেক করার আগে সব কন্ট্রোল/স্পেস ক্যারেক্টার বাদ দেওয়া হয়।
+  const probe = url.replace(/[\u0000-\u0020\u007F\u00A0\u2028\u2029]/g,'');
+  const hasScheme = /^[a-z][a-z0-9+.\-]*:/i.test(probe);
+  const isRelative = !hasScheme && !/^[\\/]{2}/.test(probe);     // '//evil.com' ও '\\evil.com' বাদ
+  if(!isRelative && !/^(https?:|mailto:|tel:)/i.test(probe)){
+    toast('⚠️ নিরাপত্তার কারণে এই লিংক খোলা হয়নি','w');
+    return;
+  }
   const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
   if(isNative){
     window.location.href = url;
@@ -77,6 +88,9 @@ function encKey(k){ return k.replace(/[.#$[\]/]/g,'_'); }
 function genRef(){ return Math.random().toString(36).slice(2,8).toUpperCase(); }
 // Device fingerprint (basic)
 function getDeviceId(){
+  // Android অ্যাপে আসল device id (নিচের ensureDeviceId() একবার সেভ করে) — localStorage মুছলেও বদলায় না
+  const nat=localStorage.getItem('ez_dev_native');
+  if(nat) return nat;
   let id=localStorage.getItem('ez_dev');
   if(!id){
     id=[navigator.platform,screen.width,screen.height,navigator.language,new Date().getTimezoneOffset()].join('-');
@@ -85,6 +99,20 @@ function getDeviceId(){
   }
   return id;
 }
+// Android-এ Capacitor Device প্লাগিন থেকে আসল device id (ANDROID_ID) আনে; ব্রাউজারে আগের fingerprint-ই থাকে।
+// দরকার: package.json এ @capacitor/device (এই ফাইলের সাথে দেওয়া হয়েছে)
+async function ensureDeviceId(){
+  try{
+    const D = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Device;
+    if(D && typeof D.getId==='function'){
+      const r = await D.getId();
+      const raw = String((r && (r.identifier||r.uuid)) || '').replace(/[^A-Za-z0-9_\-]/g,'');
+      if(raw) localStorage.setItem('ez_dev_native','n_'+raw.slice(0,40));
+    }
+  }catch(e){}
+  return getDeviceId();
+}
+try{ ensureDeviceId(); }catch(e){}
 // Clipboard
 function copyText(txt){
   navigator.clipboard.writeText(txt).then(()=>toast(T('cpd'),'s')).catch(()=>{
@@ -396,30 +424,12 @@ function getUserPayout(cpaAmount){
 }
 
 // ── ALL CPA PLATFORMS — RSS/JSON Feed সিস্টেম ──────────
-// ⚠️ credentials শুধু নিচের PLATFORM_CREDS object এ বসান — database call নেই
-const PLATFORM_CREDS = {
-  // ── আপনার credentials এখানে বসান ──
-  cpagrip: { userId:'2441114', key:'7f0b09da3b2d682f1189d1d6abbf24fc' },
-  ogads:   { userId:'', key:'' },
-  adgate:  { userId:'', key:'' },
-  adscend: { userId:'', key:'' },
-  mylead:  { userId:'', key:'' },
-  adworkm: { userId:'', key:'' },
-  cpalead: { userId:'', key:'' },
-  offertoro:{ userId:'', key:'' },
-  lootably:{ userId:'', key:'' },
-  revuniv: { userId:'', key:'' },
-  ayetstud:{ userId:'', key:'' },
-  wannads: { userId:'', key:'' },
-  timewall:{ userId:'', key:'' },
-  kiwiwall:{ userId:'', key:'' },
-  monlix:  { userId:'', key:'' },
-  taprain: { userId:'', key:'' },
-  ofwallme:{ userId:'', key:'' },
-  ofwallinfo:{ userId:'', key:'' },
-  adwebm:  { userId:'', key:'' },
-  ofwallcom:{ userId:'', key:'' },
-};
+// ⚠️ offerwall-এর গোপন key আর অ্যাপে নেই। সেগুলো থাকে Supabase Secret `OFFER_CREDS`-এ,
+//    আর 'offer-feed' function সার্ভার থেকে ফিড এনে দেয় (key কখনো ফোনে/ইন্টারনেটে ঘোরে না)।
+// নতুন platform চালু করতে: ১) Supabase Secret OFFER_CREDS-এ তার userId/key বসান
+//                          ২) নিচের ACTIVE_PLATFORMS তালিকায় তার নাম যোগ করুন
+const PLATFORM_CREDS = {};
+const ACTIVE_PLATFORMS = ['cpagrip'];
 
 // RSS_PLATFORMS — প্রতিটা platform এর feed URL + XML/JSON parse logic
 const RSS_PLATFORMS = {
@@ -678,24 +688,14 @@ const ALL_WALLS_MAP = {
 
 // একটা platform এর feed fetch করো (RSS বা JSON)
 async function fetchOnePlatform(wallId, platformId, uid, cc){
-  const creds = PLATFORM_CREDS[platformId]||{};
-  if(!creds.userId && !creds.key) return []; // credentials নেই → skip
-  if(!creds.key) return [];
-  const plat = RSS_PLATFORMS[platformId];
-  if(!plat) return [];
+  if(!ACTIVE_PLATFORMS.includes(platformId)) return [];   // চালু করা হয়নি → সার্ভারকে ডাকার দরকার নেই
   try{
-    const feedUrl  = plat.buildUrl(creds, cc, uid);
-    const proxyUrl = CFG.rssProxy + encodeURIComponent(feedUrl);
-    const res = await fetch(proxyUrl, { signal: AbortSignal.timeout(10000) });
-    if(!res.ok) return [];
-    if(plat.isJson){
-      const json = await res.json();
-      return (plat.parse(json)||[]).filter(o=>o.title && o.link).map(o=>({...o, _w:wallId}));
-    } else {
-      const txt = await res.text();
-      const xml  = new DOMParser().parseFromString(txt,'text/xml');
-      return (plat.parse(xml)||[]).filter(o=>o.title && o.link).map(o=>({...o, _w:wallId}));
-    }
+    // সার্ভার (offer-feed) key ব্যবহার করে ফিড আনে, ৩০ মিনিট cache করে, আর শুধু নিরাপদ http(s) লিংক ফেরত দেয়
+    const {data, error} = await sb.functions.invoke('offer-feed', { body:{ platform: platformId, country: cc } });
+    if(error || !data || !Array.isArray(data.offers)) return [];
+    return data.offers
+      .filter(o=>o && o.title && typeof o.link==='string' && /^https?:\/\//i.test(o.link))
+      .map(o=>({...o, _w:wallId}));
   }catch(e){ return []; }
 }
 
@@ -877,7 +877,7 @@ function renderAllOffers(){
   wrap.innerHTML = list.map(o=>{
     const pay = getUserPayout(o.payout);
     const desc = escapeHtml((o.desc||'').replace(/<[^>]*>/g,'').trim());
-    return `<div class="uof-card" onclick="openRSSOffer('${encodeURIComponent(o.link)}','${o._w}')">
+    return `<div class="uof-card" onclick="openRSSOffer(${jsArg(encodeURIComponent(o.link))},${jsArg(o._w)})">
       <div class="uof-ic">${o.img?`<img src="${escapeHtml(o.img)}" alt="" onerror="this.parentNode.textContent='🎯'">`:'🎯'}</div>
       <div class="uof-mid">
         <div class="uof-title">${escapeHtml(o.title)}</div>
@@ -957,14 +957,21 @@ async function _fetchCountryJson(url, pick){
 }
 async function detectCountry(){
   let cc='';
-  // একটার পর একটা সার্ভিস — একটা বন্ধ থাকলে পরেরটা
-  const sources = [
-    ['https://country-check.therockvai-textbd2025.workers.dev', d=>d.country],
-    ['https://ipwho.is/',                                        d=>d.country_code],
-    ['https://ipapi.co/json/',                                   d=>d.country_code],
-  ];
-  for(const [url,pick] of sources){
-    try{ cc = await _fetchCountryJson(url,pick); if(cc && cc.length===2) break; cc=''; }catch(e){}
+  // ১) আমাদের নিজের সার্ভার — Cloudflare-এর দেশ-হেডার থেকে (তৃতীয় পক্ষ লাগে না)
+  try{
+    const {data:ccSrv} = await sb.rpc('get_my_country');
+    cc = String(ccSrv||'').toUpperCase();
+    if(cc.length!==2) cc='';
+  }catch(e){ cc=''; }
+  // ২) না পেলে পাবলিক সার্ভিস (ফলব্যাক) — একটা বন্ধ থাকলে পরেরটা
+  if(!cc){
+    const sources = [
+      ['https://ipwho.is/',      d=>d.country_code],
+      ['https://ipapi.co/json/', d=>d.country_code],
+    ];
+    for(const [url,pick] of sources){
+      try{ cc = await _fetchCountryJson(url,pick); if(cc && cc.length===2) break; cc=''; }catch(e){}
+    }
   }
   // সব সার্ভিস ফেল করলে ফোনের টাইমজোন দিয়ে অন্তত বাংলাদেশ চেনা
   if(!cc){
