@@ -214,21 +214,17 @@ async function loadLeaderboard(){
       return;
     }
     // Supabase — শুধু snake_case columns select করো
-    const {data, error} = await sb
-      .from('users')
-      .select('id, name, email, usd_earned, active_referrals, is_admin, banned')
-      .eq('banned', false)
-      .limit(100);
+    const {data, error} = await sb.rpc('get_leaderboard');
     if(error){ console.log('Leaderboard skipped:', error.message); S.leaderboard=[]; return; }
     S.leaderboard = (data||[])
       .map(u=>({
-        uid: u.id,
+        uid: u.is_me ? (S.user?.uid||'') : '',
         name: u.name||'',
-        email: u.email||'',
+        email: '',
         usdEarned: parseFloat(u.usd_earned||0),
         activeReferrals: parseInt(u.active_referrals||0),
-        banned: u.banned===true,
-        isAdmin: u.is_admin===true,
+        banned: false,
+        isAdmin: false,
       }))
       .filter(u => u.usdEarned > 0 && !u.banned && !u.isAdmin)
       .sort((a,b) => b.usdEarned - a.usdEarned) // JS এ sort
@@ -259,14 +255,9 @@ async function loadTrustStats(){
     const total = parseFloat(statRow?.total_paid_out||0);
 
     // ── Ticker: শুধু সাম্প্রতিক ১০টা approved withdrawal (মাস্কড নাম) ──
-    const { data, error } = await sb
-      .from('withdrawals')
-      .select('amount, user_name, method, created_at')
-      .eq('status','approved')
-      .order('created_at', { ascending:false })
-      .limit(10);
+    const { data: spData, error } = await sb.rpc('get_social_proof');
     if(error){ console.log('Trust stats ticker skipped:', error.message); return { total, recent:[] }; }
-    const recent = (data||[]).map(r=>({
+    const recent = ((spData && spData.withdrawals) || []).map(r=>({
       name: maskName(r.user_name||'User'),
       amount: parseFloat(r.amount)||0,
       method: r.method||'',
@@ -592,8 +583,8 @@ async function loadAdminAwards(c){
             }</span>
             ${a.status==='pending'?`
               <div style="display:flex;gap:6px">
-                <button class="btn bp bsm" onclick="approveAward('${a.id}')">✅ Approve</button>
-                <button class="btn bsm" style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5" onclick="rejectAward('${a.id}')">❌ Reject</button>
+                <button class="btn bp bsm" onclick="approveAward(${jsArg(a.id)})">✅ Approve</button>
+                <button class="btn bsm" style="background:#fee2e2;color:#dc2626;border:1.5px solid #fca5a5" onclick="rejectAward(${jsArg(a.id)})">❌ Reject</button>
               </div>`:''}
           </div>
         </div>`).join('')
@@ -604,13 +595,9 @@ async function loadAdminAwards(c){
 // ── Track monthly earnings ──
 // Call this whenever user earns money
 async function trackMonthlyEarning(uid, amount){
-  const month = currentMonth();
-  const snap = await fDB.ref(`users/${uid}`).once('value');
-  const ud = snap.val()||{};
-  const me = ud.monthly_earnings || ud.monthlyEarnings || {};
-  const current = parseFloat(me[month]||0);
-  me[month] = current + amount;
-  await fDB.ref(`users/${uid}`).update({monthly_earnings: me});
+  // এখন database নিজেই (trigger দিয়ে) প্রতিটি আয় মাসিক হিসাবে যোগ করে।
+  // অ্যাপ থেকে monthly_earnings লেখা বন্ধ — তাই এখানে আর কিছু করার নেই।
+  return;
 }
 
 // ── User Awards page ──
