@@ -64,7 +64,7 @@ function buildWallFramePage(){
     <div style="font-size:46px;margin-bottom:12px">${w.icon||'🌐'}</div>
     <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#fff;margin-bottom:6px">${w.name||'Offerwall'}</div>
     <div style="font-size:12px;color:rgba(255,255,255,.8);margin-bottom:20px">${T('earnUpToLabel')} <strong>$${(S.countryEarn||0.30).toFixed(2)}</strong> ${T('perCompletedOfferLabel')}</div>
-    <a href="${link}" onclick="openLink('${link}');return false;"
+    <a href="${escapeHtml(link)}" onclick="openLink(${jsArg(link)});return false;"
       style="display:inline-flex;align-items:center;gap:8px;background:#fff;color:#0f172a;border-radius:14px;padding:14px 28px;font-size:14px;font-weight:800;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.15)">
       ${T('openFullBtn')}
     </a>
@@ -261,7 +261,7 @@ function buildWallView(wallId){
   <!-- IFRAME / LINK MODE -->
   ${link?`
   <div class="card mb12">
-    <button class="btn bp mb8" onclick="openLink('${link}')">${T('ofl')} ↗</button>
+    <button class="btn bp mb8" onclick="openLink(${jsArg(link)})">${T('ofl')} ↗</button>
     <div style="font-size:12px;color:#64748b;text-align:center;margin-top:4px">${T('warnIframe')}</div>
   </div>
   <div style="border:1.5px solid #dbeafe;border-radius:14px;overflow:hidden;margin-bottom:14px;box-shadow:0 2px 12px rgba(37,99,235,.07)">
@@ -269,7 +269,7 @@ function buildWallView(wallId){
       <div style="display:flex;gap:4px"><div style="width:8px;height:8px;border-radius:50%;background:#ef4444"></div><div style="width:8px;height:8px;border-radius:50%;background:#f59e0b"></div><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div></div>
       <span style="font-weight:600">${w.name||wallId}</span>
     </div>
-    <iframe src="${link}" style="width:100%;height:520px;display:block;border:none" scrolling="yes" loading="lazy"></iframe>
+    <iframe src="${escapeHtml(safeUrl(link))}" style="width:100%;height:520px;display:block;border:none" scrolling="yes" loading="lazy"></iframe>
   </div>`:`<div class="card mb12"><div class="empty"><div class="ein">🔗</div><div class="etx">${T('nln')}</div></div></div>`}
   `)}
 `}
@@ -295,7 +295,7 @@ function renderRSSOffers(wallId){
   <div style="background:#fff;border:1.5px solid #dbeafe;border-radius:13px;padding:13px;margin-bottom:9px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;transition:all .18s" 
     onmouseover="this.style.borderColor='#93c5fd';this.style.transform='translateY(-1px)'"
     onmouseout="this.style.borderColor='#dbeafe';this.style.transform='translateY(0)'"
-    onclick="openRSSOffer('${encodeURIComponent(o.link)}','${wallId}')">
+    onclick="openRSSOffer(${jsArg(encodeURIComponent(o.link))},${jsArg(wallId)})">
     <div style="width:46px;height:46px;border-radius:11px;background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #dbeafe;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">
       ${o.img?`<img src="${escapeHtml(o.img)}" style="width:36px;height:36px;border-radius:8px;object-fit:cover" onerror="this.parentNode.textContent='🎯'">`:'🎯'}
     </div>
@@ -313,7 +313,8 @@ function renderRSSOffers(wallId){
 }
 
 function openRSSOffer(encodedLink, wallId){
-  const link=decodeURIComponent(encodedLink);
+  let link='';
+  try{ link=decodeURIComponent(encodedLink); }catch(e){ return; }
   if(!link) return;
   openLink(link);
   trackEvent('offer_open', { wall_id: wallId||'' });
