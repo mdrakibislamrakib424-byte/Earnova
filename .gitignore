@@ -13,6 +13,9 @@ ios/
 *.jks
 google-services.json
 serviceAccountKey.json
+*.pem
+*.p12
+*.pfx
 firebase-service-account*.json
 .env
 .env.local
@@ -22,3 +25,6 @@ firebase-service-account*.json
 .DS_Store
 Thumbs.db
 dist/
+
+# ── Supabase CLI এর লোকাল ক্যাশ (project ref/pooler URL ইত্যাদি থাকে) ──
+supabase/.temp/
