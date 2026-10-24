@@ -92,7 +92,7 @@ async function loadAdminDashboard(c){
       options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true }, x:{ ticks:{ maxTicksLimit:8 } } } }
     });
   }catch(e){
-    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${e.message}</div></div>`;
+    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -185,7 +185,7 @@ async function loadAdminErrorLogs(c){
               </div>
               <div class="xs mu mt8">🗓 ${fmtD(l.created_at)} ${new Date(l.created_at).toLocaleTimeString()}</div>
             </div>
-            <button class="btn br bau bsm" data-del-err="${l.id}" style="flex-shrink:0">✕</button>
+            <button class="btn br bau bsm" data-del-err="${escapeHtml(l.id)}" style="flex-shrink:0">✕</button>
           </div>
           ${l.stack?`<details style="font-size:10px">
             <summary style="cursor:pointer;color:#2563eb;font-weight:600">Stack trace দেখুন</summary>
@@ -230,21 +230,21 @@ async function loadAdminOrders(c){
   <div class="card mb10">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
       <div>
-        <div style="font-size:11px;color:#94a3b8;font-weight:600">${id}</div>
-        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0f172a;margin-top:2px">${o.platform} — ${o.service}</div>
+        <div style="font-size:11px;color:#94a3b8;font-weight:600">${escapeHtml(id)}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#0f172a;margin-top:2px">${escapeHtml(o.platform)} — ${escapeHtml(o.service)}</div>
       </div>
       <div style="font-size:13px;font-weight:700;padding:4px 10px;border-radius:8px;${o.status==='approved'?'background:#f0fdf4;color:#059669':o.status==='rejected'?'background:#fef2f2;color:#dc2626':'background:#fefce8;color:#d97706'}">${o.status==='approved'?'✅ Done':o.status==='rejected'?'❌ Rejected':'⏳ Pending'}</div>
     </div>
     <div style="font-size:12px;color:#475569;line-height:1.8">
-      <div>👤 <strong>${o.name}</strong> · 📞 ${o.phone}</div>
+      <div>👤 <strong>${escapeHtml(o.name)}</strong> · 📞 ${escapeHtml(o.phone)}</div>
       <div>📦 Qty: <strong>${o.qty?.toLocaleString()}</strong> · 💰 <strong>$${parseFloat(o.price||0).toFixed(2)}</strong></div>
-      <div>🔗 <a href="${o.link}" onclick="openLink(this.href);return false;" style="color:#2563eb">${o.link?.substring(0,40)}…</a></div>
-      ${o.notes?`<div>📝 ${o.notes}</div>`:''}
+      <div>🔗 <a href="${escapeHtml(safeUrl(o.link))}" onclick="openLink(this.href);return false;" style="color:#2563eb">${escapeHtml((o.link||'').substring(0,40))}…</a></div>
+      ${o.notes?`<div>📝 ${escapeHtml(o.notes)}</div>`:''}
     </div>
     <div style="display:flex;gap:8px;margin-top:10px">
-      <button onclick="updateOrder('${id}','approved')" style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">✅ Approve</button>
-      <button onclick="updateOrder('${id}','rejected')" style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">❌ Reject</button>
-      <button onclick="deleteOrder('${id}')" style="background:#f1f5f9;border:none;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:#64748b;cursor:pointer">🗑️</button>
+      <button onclick="updateOrder(${jsArg(id)},'approved')" style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">✅ Approve</button>
+      <button onclick="updateOrder(${jsArg(id)},'rejected')" style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:9px;padding:8px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">❌ Reject</button>
+      <button onclick="deleteOrder(${jsArg(id)})" style="background:#f1f5f9;border:none;border-radius:9px;padding:8px 12px;font-size:12px;font-weight:700;color:#64748b;cursor:pointer">🗑️</button>
     </div>
   </div>`).join('');
 }
@@ -519,13 +519,41 @@ max_per_user: t.max_per_user||1,
     </div>
     <div style="font-size:12px;color:#475569;margin-bottom:8px">${escapeHtml(t.platform)} · $${t.reward} · Workers: ${t.currentWorkers||0}/${t.maxWorkers}${(t.proofSteps&&t.proofSteps.length)?' · 📋 '+t.proofSteps.length+' steps':' · 📷 1 screenshot'}</div>
     <div style="display:flex;gap:8px">
-      <button onclick="toggleTask('${id}','${t.status}')" style="flex:1;background:${t.status==='active'?'#fef2f2':'#f0fdf4'};border:1px solid ${t.status==='active'?'#fca5a5':'#86efac'};border-radius:8px;padding:7px;font-size:11px;font-weight:700;color:${t.status==='active'?'#dc2626':'#059669'};cursor:pointer">${t.status==='active'?'⏸ Pause':'▶ Activate'}</button>
-      <button onclick="deleteTask('${id}')" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;color:#64748b;cursor:pointer">🗑️</button>
+      <button onclick="toggleTask(${jsArg(id)},${jsArg(t.status)})" style="flex:1;background:${t.status==='active'?'#fef2f2':'#f0fdf4'};border:1px solid ${t.status==='active'?'#fca5a5':'#86efac'};border-radius:8px;padding:7px;font-size:11px;font-weight:700;color:${t.status==='active'?'#dc2626':'#059669'};cursor:pointer">${t.status==='active'?'⏸ Pause':'▶ Activate'}</button>
+      <button onclick="deleteTask(${jsArg(id)})" style="background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:11px;font-weight:700;color:#64748b;cursor:pointer">🗑️</button>
     </div>
   </div>`).join('');
 
   c.innerHTML = html;
   loadPendingSubmissions();
+}
+
+// ── প্রাইভেট 'proofs' bucket: ছবি দেখাতে ৬০ মিনিটের signed লিংক বানানো হয় ──
+function ezProofPath(v){
+  v = String(v||'');
+  for(const mk of ['/object/public/proofs/','/object/sign/proofs/','/object/authenticated/proofs/']){
+    const i = v.indexOf(mk);
+    if(i !== -1) return decodeURIComponent(v.substring(i + mk.length).split('?')[0]);
+  }
+  if(/^https?:\/\//i.test(v)) return null;     // অন্য সাইটের লিংক — storage path নয়
+  return v;                                      // আগে থেকেই storage path
+}
+async function ezSignedProofUrl(v){
+  const p = ezProofPath(v);
+  if(!p) return String(v||'');
+  const {data, error} = await sb.storage.from('proofs').createSignedUrl(p, 3600);
+  return error ? '' : data.signedUrl;
+}
+async function ezHydrateProofs(root){
+  const els = (root||document).querySelectorAll('[data-ppath]');
+  await Promise.all([...els].map(async el=>{
+    const url = await ezSignedProofUrl(el.getAttribute('data-ppath'));
+    if(!url){
+      if(el.tagName==='IMG' && el.parentNode) el.parentNode.innerHTML='<div style="padding:20px;text-align:center;color:#94a3b8;font-size:12px">⚠️ Photo failed to load</div>';
+      return;
+    }
+    if(el.tagName==='IMG') el.src = url; else el.href = url;
+  }));
 }
 
 // একটা submission এর সব proof (photo + text) দেখানোর HTML — নতুন `proofs` না থাকলে পুরনো photo_url
@@ -553,9 +581,9 @@ function adminProofsHtml(s){
     }
     return `<div style="margin-bottom:10px">${lb}
       <div style="position:relative;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden">
-        <img src="${escapeHtml(p.value)}" style="width:100%;height:auto;max-height:420px;object-fit:contain;display:block;border-radius:13px"
+        <img data-ppath="${escapeHtml(p.value)}" style="width:100%;height:auto;max-height:420px;object-fit:contain;display:block;border-radius:13px"
           onerror="this.parentNode.innerHTML='<div style=\'padding:20px;text-align:center;color:#94a3b8;font-size:12px\'>⚠️ Photo failed to load</div>'">
-        <a href="${escapeHtml(p.value)}" onclick="openLink(this.href);return false;"
+        <a href="#" data-ppath="${escapeHtml(p.value)}" onclick="if(this.getAttribute('href')==='#')return false;openLink(this.href);return false;"
           style="position:absolute;top:8px;right:8px;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;text-decoration:none;cursor:pointer">🔍 Full View</a>
       </div></div>`;
   }).join('');
@@ -577,15 +605,16 @@ async function loadPendingSubmissions(){
     <div style="font-size:11px;color:#64748b;margin-bottom:8px">👤 ${escapeHtml(s.user_email||s.email||s.uid)} · ${new Date(s.created_at||s.createdAt||Date.now()).toLocaleDateString()}</div>
     ${adminProofsHtml(s)}
     <div style="display:flex;gap:8px">
-      <button id="appBtn_${s.id}"
-        onclick="handleApprove('${s.id}','${s.uid}',${parseFloat(s.reward)||0})"
+      <button id="appBtn_${escapeHtml(s.id)}"
+        onclick="handleApprove(${jsArg(s.id)},${jsArg(s.uid)},${parseFloat(s.reward)||0})"
         style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(5,150,105,.3)">✅ Approve</button>
-      <button id="rejBtn_${s.id}"
-        onclick="handleReject('${s.id}')"
+      <button id="rejBtn_${escapeHtml(s.id)}"
+        onclick="handleReject(${jsArg(s.id)})"
         style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(220,38,38,.3)">❌ Reject</button>
     </div>
   </div>
 `).join('');
+  ezHydrateProofs(el);
 }
 
 async function handleApprove(subId, uid, reward){
@@ -679,13 +708,7 @@ async function deleteSubmissionPhoto(subId){
   try{
     const {data:sub} = await sb.from('submissions')
       .select('photo_url,proofs').eq('id',subId).single();
-    const marker = '/object/public/proofs/';
-    const toPath = (url)=>{
-      if(!url) return null;
-      const start = String(url).indexOf(marker);
-      if(start === -1) return null;
-      return decodeURIComponent(String(url).substring(start + marker.length));
-    };
+    const toPath = (url)=> url ? ezProofPath(url) : null;
     const paths = [];
     const p0 = toPath(sub?.photo_url);
     if(p0) paths.push(p0);
@@ -834,7 +857,7 @@ function exportToCSV(rows, filename){
     //    ফর্মুলা মনে করে রান করার চেষ্টা করতে পারে ("CSV Injection" নামে
     //    পরিচিত একটা ঝুঁকি)। সামনে একটা ' (single quote) বসিয়ে দিলে
     //    Excel/Sheets সেটাকে প্লেইন টেক্সট হিসেবে ধরে, ফর্মুলা হিসেবে না।
-    if(/^[=+\-@]/.test(s)) s = "'" + s;
+    if(/^[=+\-@\t\r]/.test(s)) s = "'" + s;
     if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
     return s;
   };
@@ -918,13 +941,13 @@ async function loadAdminUsers(c){
             <div class="xs mu" style="color:#94a3b8">🆔 ${(u.uid||'').slice(0,16)}... · 🗓 ${fmtD(u.createdAt)}</div>
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
-            <button class="btn ${u.banned?'bg':'br'} bau bsm" data-uid="${u.uid}" data-action="${u.banned?'unban':'ban'}">
+            <button class="btn ${u.banned?'bg':'br'} bau bsm" data-uid="${escapeHtml(u.uid)}" data-action="${u.banned?'unban':'ban'}">
               ${u.banned?'✅ '+T('ub'):'🚫 '+T('bn')}
             </button>
-            <button class="btn ${u.isAdmin?'br':'bh'} bau bsm" data-uid="${u.uid}" data-action="${u.isAdmin?'removeAdmin':'makeAdmin'}">
+            <button class="btn ${u.isAdmin?'br':'bh'} bau bsm" data-uid="${escapeHtml(u.uid)}" data-action="${u.isAdmin?'removeAdmin':'makeAdmin'}">
               ${u.isAdmin?'🔻 '+T('ra'):'⚙️ '+T('ma')}
             </button>
-            <button class="btn br bau bsm" data-uid="${u.uid}" data-action="delete" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5">
+            <button class="btn br bau bsm" data-uid="${escapeHtml(u.uid)}" data-action="delete" style="background:#fee2e2;color:#dc2626;border-color:#fca5a5">
               🗑️ Delete
             </button>
           </div>
@@ -994,7 +1017,7 @@ async function loadAdminUsers(c){
     }
 
   }catch(e){
-    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${e.message}</div></div>`;
+    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 // ══════════════════════════════════════════════════════════
@@ -1032,20 +1055,22 @@ async function loadAdminKYC(c){
       </div>
       ${k.photo_url ? `
       <div style="position:relative;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;overflow:hidden;margin-bottom:10px">
-        <img src="${k.photo_url}"
+        <img data-ppath="${escapeHtml(k.photo_url)}"
           style="width:100%;height:auto;max-height:420px;object-fit:contain;display:block;border-radius:13px"
           onerror="this.parentNode.innerHTML='<div style=\\'padding:20px;text-align:center;color:#94a3b8;font-size:12px\\'>⚠️ Photo failed to load</div>'">
-        <a href="${k.photo_url}" onclick="openLink(this.href);return false;"
+        <a href="#" data-ppath="${escapeHtml(k.photo_url)}" onclick="if(this.getAttribute('href')==='#')return false;openLink(this.href);return false;"
           style="position:absolute;top:8px;right:8px;background:rgba(15,23,42,.65);backdrop-filter:blur(6px);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;color:#fff;text-decoration:none;cursor:pointer">
           🔍 Full View
         </a>
       </div>` : `<div style="font-size:11px;color:#f59e0b;background:rgba(245,158,11,.08);border-radius:6px;padding:6px 10px;margin-bottom:10px">⚠️ কোনো ছবি নেই</div>`}
       ${k.status==='pending' ? `
       <div style="display:flex;gap:8px">
-        <button data-kid="${k.id}" data-kuid="${k.uid}" data-kaction="approve" style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">✅ Approve</button>
-        <button data-kid="${k.id}" data-kuid="${k.uid}" data-kaction="reject" style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">❌ Reject</button>
+        <button data-kid="${escapeHtml(k.id)}" data-kuid="${escapeHtml(k.uid)}" data-kaction="approve" style="flex:1;background:linear-gradient(135deg,#059669,#047857);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">✅ Approve</button>
+        <button data-kid="${escapeHtml(k.id)}" data-kuid="${escapeHtml(k.uid)}" data-kaction="reject" style="flex:1;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;border-radius:10px;padding:10px;font-size:12px;font-weight:700;color:#fff;cursor:pointer">❌ Reject</button>
       </div>` : ''}
     </div>`).join('');
+
+    ezHydrateProofs(c);
 
     c.querySelectorAll('[data-kid]').forEach(btn=>{
       btn.onclick = async ()=>{
@@ -1072,7 +1097,7 @@ async function loadAdminKYC(c){
       };
     });
   }catch(e){
-    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${e.message}</div></div>`;
+    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -1107,7 +1132,7 @@ async function loadWithdrawals(c){
       </div>
       <div class="arow-bt">
         <span class="bdg ${w.status==='approved'?'bdg2':w.status==='rejected'?'bdr':'bdy'}">${w.status==='approved'?'✅ '+T('apd'):w.status==='rejected'?'❌ '+T('rjd'):'⏳ '+T('pd')}</span>
-        ${w.status==='pending'?`<button class="btn bg bau bsm" data-wid="${w.id}" data-waction="approve">${T('apr')}</button><button class="btn br bau bsm" data-wid="${w.id}" data-waction="reject">${T('rej')}</button>`:''}
+        ${w.status==='pending'?`<button class="btn bg bau bsm" data-wid="${escapeHtml(w.id)}" data-waction="approve">${T('apr')}</button><button class="btn br bau bsm" data-wid="${escapeHtml(w.id)}" data-waction="reject">${T('rej')}</button>`:''}
       </div>
     </div>`).join('');
     document.getElementById('exportWdBtn').onclick = ()=>{
@@ -1125,7 +1150,14 @@ async function loadWithdrawals(c){
         btn.disabled=true;
         const wid=btn.dataset.wid, waction=btn.dataset.waction;
         const newStatus = waction==='approve'?'approved':'rejected';
-        const {error} = await sb.from('withdrawals').update({status:newStatus}).eq('id',wid);
+        let error = null;
+        if(waction==='approve'){
+          ({error} = await sb.from('withdrawals').update({status:newStatus}).eq('id',wid));
+        }else{
+          // reject = সার্ভার স্ট্যাটাস বদলায় এবং ইউজারের টাকা ফেরত দেয়
+          const r = await sb.rpc('admin_reject_withdrawal', {p_id: wid});
+          error = r.error || ((r.data && r.data.ok===false) ? {message: r.data.code||'failed'} : null);
+        }
         if(error){ toast('Error: '+error.message,'e'); btn.disabled=false; return; }
         // ── Approve হলে stats.total_paid_out বাড়ানো (Home পেজের "Total Paid to Users" কাউন্টার এখান থেকেই সঠিক total পায়) ──
         // ⚠️ এখানে atomic_increment RPC ব্যবহার করা হচ্ছে (একই ফাংশন যেটা
@@ -1155,7 +1187,7 @@ async function loadWithdrawals(c){
       };
     });
   }catch(e){
-    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${e.message}</div></div>`;
+    c.innerHTML=`<div class="empty"><div class="ein">⚠️</div><div class="etx">Error: ${escapeHtml(e.message)}</div></div>`;
   }
 }
 
@@ -1188,7 +1220,7 @@ async function loadAdminNoticeList(){
   if(!items.length){ l.innerHTML=`<div class="empty"><div class="ein">📭</div><div class="etx">${T('nun2')}</div></div>`; return; }
   l.innerHTML=items.map(n=>`<div class="arow">
     <div class="arow-l"><div class="sm">${escapeHtml(n.text)}</div><div class="xs mu mt8">${fmtD(n.created_at||n.createdAt)}</div></div>
-    <button class="btn br bau bsm" data-del-n="${n.id}">✕</button>
+    <button class="btn br bau bsm" data-del-n="${escapeHtml(n.id)}">✕</button>
   </div>`).join('');
   l.querySelectorAll('[data-del-n]').forEach(btn=>{
     btn.onclick=async()=>{
@@ -1207,9 +1239,9 @@ async function loadAdminOffers(c){
   });
   all.sort((a,b)=>b.completedAt-a.completedAt);
   if(!all.length){ c.innerHTML=`<div class="empty"><div class="ein">📋</div><div class="etx">${T('nuo')}</div></div>`; return; }
-  c.innerHTML=`<div class="card-hd">${T('oflist')}</div>`+all.slice(0,30).map(o=>`<div class="arow" data-ouid="${o.uid}" data-owid="${o.wallId}" data-oid="${o.id}" style="cursor:pointer">
+  c.innerHTML=`<div class="card-hd">${T('oflist')}</div>`+all.slice(0,30).map(o=>`<div class="arow" data-ouid="${escapeHtml(o.uid)}" data-owid="${escapeHtml(o.wallId)}" data-oid="${escapeHtml(o.id)}" style="cursor:pointer">
     <div class="arow-l">
-      <div class="fw6 sm">${o.uid?.slice(0,8)||'?'}… · ${S.wallData[o.wallId]?.name||o.wallId}</div>
+      <div class="fw6 sm">${escapeHtml(o.uid?.slice(0,8)||'?')}… · ${escapeHtml(S.wallData[o.wallId]?.name||o.wallId)}</div>
       <div class="xs mu mt8">${fmt$(o.amount)} · ${fmtD(o.completedAt)}</div>
     </div>
     <span class="bdg bdg2">${T('apd')}</span>
