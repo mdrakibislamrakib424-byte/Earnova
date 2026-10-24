@@ -50,40 +50,20 @@ async function attachAppEvents(){
       }
       const w=S.wallData[wallId]||{};
       const embedMode=w.embedMode||'iframe';
-      // Script Tag injection
+      // Script Tag injection — এখন sandbox করা iframe-এ চলে: তৃতীয়-পক্ষ স্ক্রিপ্ট
+      // অ্যাপের session/localStorage/ডেটা ছুঁতে পারে না (sandbox-এ allow-same-origin নেই)
       if(embedMode==='script' && w.scriptCode){
         const zone=document.getElementById('scriptInjectZone');
         if(zone){
           const uid=S.user?.uid||'';
-          document.querySelectorAll('script[data-cpx-injected]').forEach(s=>s.remove());
-          document.querySelectorAll('div[data-cpx-injected]').forEach(d=>d.remove());
-          if(window.config) delete window.config;
-          if(window.cpx_research) delete window.cpx_research;
-          const injected=w.scriptCode.replace(/\{uid\}/g,uid);
-          const wrapper=document.createElement('div');
-          wrapper.innerHTML=injected;
-          wrapper.querySelectorAll(':not(script)').forEach(node=>{
-            const clone=node.cloneNode(true);
-            clone.setAttribute('data-cpx-injected','1');
-            zone.appendChild(clone);
-          });
-          const scripts=[...wrapper.querySelectorAll('script')];
-          const execNext=(i)=>{
-            if(i>=scripts.length) return;
-            const oldS=scripts[i];
-            const newS=document.createElement('script');
-            newS.setAttribute('data-cpx-injected','1');
-            if(oldS.src){
-              newS.src=oldS.src+'?t='+Date.now(); // cache bust
-              newS.onload=()=>execNext(i+1);
-              newS.onerror=()=>execNext(i+1);
-            } else {
-              newS.textContent=oldS.textContent;
-            }
-            document.body.appendChild(newS);
-            if(!oldS.src) execNext(i+1);
-          };
-          execNext(0);
+          const injected=String(w.scriptCode).replace(/\{uid\}/g,encodeURIComponent(uid));
+          zone.innerHTML='';
+          const fr=document.createElement('iframe');
+          fr.setAttribute('sandbox','allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms');
+          fr.setAttribute('referrerpolicy','no-referrer');
+          fr.style.cssText='width:100%;height:78vh;border:none;display:block;background:#fff';
+          fr.srcdoc='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;padding:0}</style></head><body>'+injected+'</body></html>';
+          zone.appendChild(fr);
         }
       }
       // RSS
@@ -333,7 +313,7 @@ fAuth.onAuthStateChanged(async user=>{
       try{
         const {data:{session}} = await sb.auth.getSession();
         const fu = session?.user || user;
-        isVerified = !!(fu?.email_confirmed_at || fu?.confirmed_at || fu?.user_metadata?.email_verified);
+        isVerified = !!(fu?.email_confirmed_at || fu?.confirmed_at);
         if(session?.user) fAuth.currentUser = _mapUser(session.user);
       }catch(e){ isVerified = !!(user.emailVerified); }
 
@@ -436,7 +416,6 @@ initBackButton();
 initStatusBar();
 initOfflineDetection();
 initSocialLogin();
-initSocialLoginCallback();
 
 // ─── HANDLE POPUPS ────────────────────────────────────
 window.addEventListener('popstate',()=>{
@@ -695,21 +674,10 @@ async function startActivityToasts(){
     const seen = JSON.parse(seenRaw);
 
     // Real approved withdrawals
-    const {data:wds} = await sb
-      .from('withdrawals')
-      .select('id, user_name, user_email, amount, method')
-      .eq('status','approved')
-      .order('created_at',{ascending:false})
-      .limit(10);
-
-    // Real recent signups (last 7 days)
-    const week = new Date(Date.now()-7*24*60*60*1000).toISOString();
-    const {data:newUsers} = await sb
-      .from('users')
-      .select('id, name, email, created_at')
-      .gte('created_at', week)
-      .order('created_at',{ascending:false})
-      .limit(10);
+    // সার্ভার থেকে শুধু মাস্ক করা নাম/পরিমাণ আসে (ইমেইল নয়)
+    const {data:spData} = await sb.rpc('get_social_proof');
+    const wds = (spData && spData.withdrawals) || [];
+    const newUsers = (spData && spData.signups) || [];
 
     const toasts = [];
 
@@ -723,7 +691,7 @@ async function startActivityToasts(){
       const method = (w.method||'payment').replace('_',' ');
       toasts.push({
         id: toastId,
-        msg: `💸 <strong>${masked}</strong> withdrew <strong>$${parseFloat(w.amount||0).toFixed(2)}</strong> via ${method}`,
+        msg: `💸 <strong>${masked}</strong> withdrew <strong>$${parseFloat(w.amount||0).toFixed(2)}</strong> via ${escapeHtml(method)}`,
         color: 'green'
       });
     });
@@ -807,7 +775,7 @@ async function adminAddCustomOffer(){
     $$('.coCountryChk').forEach(chk=>chk.checked=false);
     if($('#coCountryAll')) $('#coCountryAll').checked=true;
     loadAdminCustomOffers();
-  }catch(e){ if(res) res.innerHTML=`<span style="color:#ef4444">❌ ${e.message}</span>`; }
+  }catch(e){ if(res) res.innerHTML=`<span style="color:#ef4444">❌ ${escapeHtml(e.message)}</span>`; }
 }
 
 async function deleteCustomOffer(id){
@@ -829,7 +797,7 @@ async function loadAdminCustomOffers(){
         <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHtml(o.title)}</div>
         <div style="font-size:11px;color:#64748b;margin-top:2px">$${parseFloat(o.payout||0).toFixed(2)} · ${escapeHtml(o.category||'Custom')}</div>
         <div style="font-size:10px;color:#2563eb;margin-top:2px;font-weight:600">📍 ${escapeHtml(cs)}</div></div>
-        <button onclick="deleteCustomOffer('${o.id}')" style="background:#fee2e2;border:1px solid #fecaca;color:#ef4444;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>
+        <button onclick="deleteCustomOffer(${jsArg(o.id)})" style="background:#fee2e2;border:1px solid #fecaca;color:#ef4444;border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑</button>
       </div>`;}).join('');
   }catch(e){ wrap.innerHTML='<div style="font-size:12px;color:#ef4444">Load error</div>'; }
 }
@@ -849,7 +817,7 @@ async function adminSendPush(){
     await fDB.ref(`notices/${nid}`).set({ title, body, createdAt: Date.now(), type:'push' });
     toast('✅ Notification পাঠানো হয়েছে!','s');
   } else {
-    if(res) res.innerHTML=`<span style="color:#ef4444">❌ ${result?.error||'কিছু একটা সমস্যা হয়েছে। REST API Key চেক করুন।'}</span>`;
+    if(res) res.innerHTML=`<span style="color:#ef4444">❌ ${escapeHtml(result?.error||'কিছু একটা সমস্যা হয়েছে। আবার চেষ্টা করুন।')}</span>`;
   }
 }
 
@@ -950,6 +918,9 @@ const REVIEW_SHOWN_KEY = 'ez_review_last_shown';
 const REVIEW_INTERVAL  = 24*60*60*1000; // ২৪ ঘণ্টা
 
 function checkReviewPopup(){
+  // লিংক বসানো না থাকলে (PASTE_YOUR... placeholder) popup দেখানোই হবে না — নইলে ভাঙা লিংক খুলত
+  const _real = u => /^https:\/\//i.test(u);
+  if(!_real(REVIEW_GOOGLE) && !_real(REVIEW_TRUSTPILOT)) return;
   // একবার review দিলে আর কখনো দেখাবে না
   if(localStorage.getItem(REVIEW_LS_KEY)) return;
   const lastShown = parseInt(localStorage.getItem(REVIEW_SHOWN_KEY)||'0');
@@ -972,8 +943,8 @@ function showReviewPopup(){
         <div style="font-size:13px;color:#64748b;line-height:1.6">আপনার একটা review আমাদের অনেক সাহায্য করে। মাত্র ১ মিনিট লাগবে।</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
-        <a href="${REVIEW_GOOGLE}"
-          onclick="markReviewDone();openLink('${REVIEW_GOOGLE}');return false;"
+${/^https:\/\//i.test(REVIEW_GOOGLE) ? `        <a href="${escapeHtml(REVIEW_GOOGLE)}"
+          onclick="markReviewDone();openLink(${jsArg(REVIEW_GOOGLE)});return false;"
           style="display:flex;align-items:center;gap:12px;background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:13px 15px;text-decoration:none">
           <img src="https://www.gstatic.com/images/branding/product/2x/maps_96dp.png" style="width:32px;height:32px;object-fit:contain;border-radius:8px" onerror="this.style.display='none'">
           <div>
@@ -981,9 +952,9 @@ function showReviewPopup(){
             <div style="font-size:11px;color:#64748b">⭐⭐⭐⭐⭐ Google-এ</div>
           </div>
           <span style="margin-left:auto;color:#2563eb;font-weight:700">→</span>
-        </a>
-        <a href="${REVIEW_TRUSTPILOT}"
-          onclick="markReviewDone();openLink('${REVIEW_TRUSTPILOT}');return false;"
+        </a>` : ''}
+${/^https:\/\//i.test(REVIEW_TRUSTPILOT) ? `        <a href="${escapeHtml(REVIEW_TRUSTPILOT)}"
+          onclick="markReviewDone();openLink(${jsArg(REVIEW_TRUSTPILOT)});return false;"
           style="display:flex;align-items:center;gap:12px;background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:14px;padding:13px 15px;text-decoration:none">
           <img src="https://cdn.trustpilot.net/brand-assets/4.1.0/logo-white.svg" style="width:32px;height:32px;object-fit:contain;border-radius:8px;background:#00b67a;padding:4px" onerror="this.style.display='none'">
           <div>
@@ -991,7 +962,7 @@ function showReviewPopup(){
             <div style="font-size:11px;color:#64748b">⭐⭐⭐⭐⭐ Trustpilot-এ</div>
           </div>
           <span style="margin-left:auto;color:#059669;font-weight:700">→</span>
-        </a>
+        </a>` : ''}
       </div>
       <button onclick="dismissReviewPopup()"
         style="width:100%;background:#f1f5f9;border:none;border-radius:12px;padding:12px;font-size:13px;color:#64748b;font-weight:600;cursor:pointer">
@@ -1084,30 +1055,6 @@ function initSocialLogin(){
     }
     SocialLogin.initialize({ google:{ webClientId } });
   }catch(e){ console.warn('SocialLogin init failed', e); }
-}
-
-// Facebook লগইন সিস্টেম ব্রাউজারে হয় (দেখুন js/db.js এর signInWithFacebook)।
-// ইউজার Facebook-এ অনুমতি দেওয়ার পর "earnova://oauth-callback?code=..."
-// লিংকে ফিরে আসে — এই একই appUrlOpen ইভেন্ট সেটা ধরে। আগের ইমেইল
-// ভেরিফিকেশন deep-link (এখন বাদ) থেকে এটা সম্পূর্ণ আলাদা: এটা শুধু
-// "earnova://oauth-callback" পাথ প্রসেস করে, অন্য কিছু না।
-function initSocialLoginCallback(){
-  if(!window.Capacitor?.Plugins?.App) return;
-  const { App: CapApp } = window.Capacitor.Plugins;
-  CapApp.addListener('appUrlOpen', async (data)=>{
-    try{
-      if(!data?.url) return;
-      const url = new URL(data.url);
-      if(url.protocol!=='earnova:' || url.host!=='oauth-callback') return; // শুধু OAuth callback-ই প্রসেস করবে
-      const code = url.searchParams.get('code');
-      if(!code){
-        const err = url.searchParams.get('error_description') || url.searchParams.get('error');
-        if(err) toast(T('socialLoginFailedMsg'),'e');
-        return;
-      }
-      await completeSocialOAuthLogin(code);
-    }catch(e){ console.error('OAuth callback handling failed:', e); }
-  });
 }
 
 // ══════════════════════════════════════════════════════════
