@@ -360,7 +360,6 @@ const CFG = {
   // ব্রাউজারে প্রিভিউ/টেস্টের সময় fallback হিসেবে এই লিংকটা ব্যবহার হয় (চাইলে বদলে দিন):
   smartLink:'about:blank',
   offerwallLink:'',   // ← Admin এখানে offerwall iframe/link URL বসাবেন অথবা Admin Panel থেকে set করবেন
-  rssProxy:'https://api.allorigins.win/raw?url=',
   earnCountry:{BD:.10,IN:.10,PK:.10,NG:.10,GH:.12,PH:.12,EG:.12,KE:.12},
   earnHi:.50, earnDef:.30,
   hiCC:['US','GB','CA','AU','DE','FR','NL','SE','NO','DK','CH','AT','SG','JP','NZ','IE'],
@@ -491,6 +490,13 @@ function escapeHtml(str){
     '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
   }[ch]));
 }
+// ── inline onclick="fn(...)" এর ভেতরে মান বসানোর নিরাপদ উপায় ──
+// escapeHtml একা যথেষ্ট না: HTML attribute-এর &#39; ব্রাউজার আগে ' বানায়, তারপর JS চলে।
+// jsArg() মানটাকে প্রথমে JS string (JSON) বানায়, তারপর HTML-escape করে — দুই স্তরেই নিরাপদ।
+//   ব্যবহার:  onclick="deleteItem(${jsArg(item.id)})"
+function jsArg(v){ return escapeHtml(JSON.stringify(v===null||v===undefined ? '' : String(v))); }
+// শুধু http(s) লিংক ফেরত দেয়, নইলে খালি স্ট্রিং (iframe src / href এর জন্য)
+function safeUrl(u){ const s=String(u||'').trim(); return /^https?:\/\//i.test(s) ? s : ''; }
 
 // ════════════════════════════════════════════════════════
 // 🛡️ SUPABASE — ADMIN রাইট প্রোটেকশন (Supabase Dashboard → SQL Editor এ চালান)
