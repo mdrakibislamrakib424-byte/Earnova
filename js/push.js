@@ -16,7 +16,13 @@ const FCM_VAPID_KEY = 'BCBwqJ4IXFjy3BzgP_dhjDnTvgIYLthf4CrQBHvf0omGj7EkoSTTQROjo
 // এই ফাংশনটা supabase/functions/send-push/index.ts এ আছে, deploy করে এখানে URL বসান
 // (বিস্তারিত ধাপ: supabase/PUSH_SETUP.md)।
 const FCM_SEND_ENDPOINT = 'https://oazyvgjixljdnjhorasa.supabase.co/functions/v1/send-push'; // যেমন: https://xxxxxxxx.supabase.co/functions/v1/send-push
-const FCM_ADMIN_SECRET  = '22222222222222222222';    // supabase/functions/send-push/index.ts এর ADMIN_SECRET Secret-এর সাথে মিলতে হবে
+// ⚠️ আগে এখানে একটা গোপন পাসওয়ার্ড (FCM_ADMIN_SECRET) ছিল — সেটা অ্যাপে রাখা নিরাপদ না।
+// এখন সার্ভার লগইন-করা ইউজারের টোকেন দেখে চেনে: admin হলে সবাইকে, সাধারণ ইউজার হলে শুধু নিজেকে push পাঠাতে পারে।
+async function _fcmHeaders(){
+  const {data} = await sb.auth.getSession();
+  const tok = data?.session?.access_token || '';
+  return { 'Content-Type':'application/json', 'Authorization':'Bearer '+tok };
+}
 
 let fcmApp = null, fcmMessaging = null;
 const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
@@ -109,8 +115,8 @@ async function sendPushToUser(userId, title, body, url='', category='general'){
   try{
     await fetch(FCM_SEND_ENDPOINT,{
       method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ secret: FCM_ADMIN_SECRET, target:'user', uid:userId, title, body, url: url||location.origin, category })
+      headers: await _fcmHeaders(),
+      body: JSON.stringify({ target:'user', uid:userId, title, body, url: url||location.origin, category })
     });
   }catch(e){}
 }
@@ -121,8 +127,8 @@ async function sendPushToAll(title, body, url='', category='general'){
   try{
     const res = await fetch(FCM_SEND_ENDPOINT,{
       method:'POST',
-      headers:{ 'Content-Type':'application/json' },
-      body: JSON.stringify({ secret: FCM_ADMIN_SECRET, target:'all', title, body, url: url||location.origin, category })
+      headers: await _fcmHeaders(),
+      body: JSON.stringify({ target:'all', title, body, url: url||location.origin, category })
     });
     const d = await res.json();
     if(d.ok) return { ok:true, recipients: d.recipients||0 };
