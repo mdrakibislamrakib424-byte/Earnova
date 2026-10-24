@@ -4,25 +4,28 @@
   "description": "EARNOVA — Earn Real Money App (Capacitor Android)",
   "private": true,
   "scripts": {
-    "build":   "node scripts/build.js",
-    "sync":    "npx cap sync android",
-    "open":    "npx cap open android",
+    "build": "node scripts/build.js",
+    "sync": "npx cap sync android",
+    "open": "npx cap open android",
     "android": "npm run build && npm run sync"
   },
   "dependencies": {
-    "@capacitor/android":          "^6.1.2",
-    "@capacitor/core":             "^6.1.2",
-    "@capacitor/app":              "^6.0.1",
-    "@capacitor/status-bar":       "^6.0.1",
-    "@capacitor/push-notifications": "^6.0.2",
-    "@capacitor/splash-screen":    "^6.0.2",
-    "@capacitor-community/admob":  "^6.0.0",
-    "@capacitor/browser":          "^6.0.3",
-    "@capgo/capacitor-social-login": "^6.0.0"
+    "@capacitor-community/admob": "6.2.0",
+    "@capacitor/android": "6.2.2",
+    "@capacitor/app": "6.0.3",
+    "@capacitor/browser": "^6.0.3",
+    "@capacitor/core": "6.2.2",
+    "@capacitor/device": "^6.0.0",
+    "@capacitor/push-notifications": "6.0.5",
+    "@capacitor/splash-screen": "6.0.4",
+    "@capacitor/status-bar": "6.0.3",
+    "@capgo/capacitor-social-login": "^6.0.0",
+    "@supabase/supabase-js": "2.45.4",
+    "chart.js": "4.4.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.2",
-    "@capacitor/assets": "^3.0.5",
-    "terser": "^5.31.6"
+    "@capacitor/cli": "6.2.2",
+    "@capacitor/assets": "3.0.5",
+    "terser": "5.51.2"
   }
 }
