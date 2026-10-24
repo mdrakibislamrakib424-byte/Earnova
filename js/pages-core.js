@@ -204,6 +204,9 @@ function buildWelcome(){
 // ⚠️ নতুন — Cloudflare Turnstile CAPTCHA বক্স (Supabase Attack Protection
 // চালু থাকলে দরকার হয়; না থাকলেও বক্সটা দেখাতে সমস্যা নেই, শুধু টোকেন
 // আনভেরিফায়েড থাকবে)। প্রতিটা ফর্মের জন্য আলাদা container id লাগে।
+// Turnstile site key (public) — captcha চালু আছে কি না এখান থেকে জানা যায়
+const EZ_TURNSTILE_SITE_KEY = '0x4AAAAAAFBcA3dirFl1ug29';
+function captchaRequired(){ return !!EZ_TURNSTILE_SITE_KEY && !EZ_TURNSTILE_SITE_KEY.includes('PASTE_YOUR'); }
 function buildCaptchaBox(containerId){
   return `<div id="${containerId}" class="cf-turnstile" style="margin-bottom:14px;display:flex;justify-content:center"></div>`;
 }
@@ -220,13 +223,15 @@ function renderCaptcha(containerId, onToken){
   if(!el) return;
   // ⚠️ capacitor.config.json/README এর নির্দেশ অনুযায়ী নিজের Turnstile
   // site key এখানে বসাতে হবে — placeholder থাকলে widget দেখাবে না।
-  const TURNSTILE_SITE_KEY = '0x4AAAAAAFBcA3dirFl1ug29';
+  const TURNSTILE_SITE_KEY = EZ_TURNSTILE_SITE_KEY;
   if(!TURNSTILE_SITE_KEY || TURNSTILE_SITE_KEY.includes('PASTE_YOUR')){
     console.warn('⚠️ Turnstile site key সেট করা হয়নি — captcha বক্স স্কিপ করা হলো।');
     return;
   }
   if(typeof turnstile === 'undefined'){
     console.warn('⚠️ Turnstile script লোড হয়নি — index.html চেক করুন।');
+    // আগে চুপচাপ স্কিপ হতো (ফলে captcha ছাড়াই ফর্ম যেত) — এখন স্পষ্ট বার্তা, আর ফর্ম ব্লক হয়
+    el.innerHTML='<div style="font-size:12px;color:#f87171;text-align:center;padding:6px">⚠️ Captcha লোড হয়নি — ইন্টারনেট চেক করে অ্যাপ আবার খুলুন</div>';
     return;
   }
   try{
@@ -432,7 +437,6 @@ async function attachAuthEvents(){
     $('#lgToReg').onclick=()=>{ S.page='register'; render(); };
     $('#lgLang').onclick=()=>EZ.openLM();
     { const _g=$('#socGoogleBtn'); if(_g) _g.onclick=()=>signInWithGoogle('login'); }
-    { const _f=$('#socFacebookBtn'); if(_f) _f.onclick=()=>signInWithFacebook(); }
   }
   // Register
   const rgBtn=$('#rgBtn');
@@ -466,7 +470,6 @@ async function attachAuthEvents(){
     $('#rgEye').onclick=()=>{ const p=$('#rgPw'); p.type=p.type==='password'?'text':'password'; };
     $('#rgToLi').onclick=()=>{ S.page='login'; render(); };
     { const _g=$('#socGoogleBtn'); if(_g) _g.onclick=()=>signInWithGoogle('register'); }
-    { const _f=$('#socFacebookBtn'); if(_f) _f.onclick=()=>signInWithFacebook(); }
   }
   // ⚠️ ফিক্স: Verify — এখন OTP কোড দিয়ে, sb.auth.getUser() এর বদলে
   // verifySignupOtp()/resendSignupOtp() ব্যবহার করে, আর fAuth.currentUser
