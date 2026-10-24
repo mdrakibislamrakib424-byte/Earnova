@@ -9,8 +9,8 @@ function buildReferralPage(){
     <div class="hx-plate-lb">${T('yourRefCodeLabel')}</div>
     <div class="hx-plate-code">${ud.refCode||'——'}</div>
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
-      <button class="hx-mbtn" onclick="copyText('${ud.refCode||''}')">${T('copyCodeBtn')}</button>
-      <button class="hx-mbtn" onclick="copyText('${refLink}')">${T('copyLinkBtn')}</button>
+      <button class="hx-mbtn" onclick="copyText(${jsArg(ud.refCode||'')})">${T('copyCodeBtn')}</button>
+      <button class="hx-mbtn" onclick="copyText(${jsArg(refLink)})">${T('copyLinkBtn')}</button>
     </div>
   </div>
 
@@ -181,16 +181,16 @@ async function submitKYC(){
   try{
     // ── একই 'proofs' storage bucket ব্যবহার হচ্ছে (social task proof-এর
     //    জন্য যেটা আগে থেকেই আছে), শুধু 'kyc/' প্রিফিক্স দিয়ে আলাদা রাখা হচ্ছে ──
-    const storagePath = `kyc/${uid}_${Date.now()}.jpg`;
-    const {error: upErr} = await sb.storage.from('proofs').upload(storagePath, file, {upsert:true});
+    // ছবি ছোট করে (≈300KB) প্রাইভেট bucket-এ নিজের ফোল্ডারে আপলোড
+    const upFile = await compressImage(file, 300, 1280);
+    const storagePath = `${uid}/kyc_${Date.now()}.jpg`;
+    const {error: upErr} = await sb.storage.from('proofs').upload(storagePath, upFile, {upsert:false, contentType:'image/jpeg'});
     if(upErr){ toast('⚠️ Upload failed: '+upErr.message,'e'); if(btn){btn.disabled=false;btn.textContent='📤 Submit for Verification';} return; }
-    const {data:urlData} = sb.storage.from('proofs').getPublicUrl(storagePath);
-
     if(btn) btn.textContent='⏳ Saving...';
     await sb.from('kyc_submissions').insert({
       id: 'KYC-'+Date.now(),
       uid, full_name:name, id_number:idNum, user_email: S.user?.email||S.userData?.email||'',
-      photo_url: urlData.publicUrl,
+      photo_url: storagePath,   // প্রাইভেট storage path (admin signed লিংকে দেখে)
       status:'pending', created_at: Date.now(),
     });
     await sb.from('users').update({ kyc_status:'pending' }).eq('id', uid);
@@ -231,7 +231,7 @@ async function loadNotices(){
     .sort((a,b)=>(b.created_at||b.createdAt||0)-(a.created_at||a.createdAt||0));
   if(!items.length){ el.innerHTML=`<div class="empty"><div class="ein">📭</div><div class="etx">${T('nun2')}</div></div>`; return; }
   const readMap=S.userData?.readNotices||{};
-  el.innerHTML=items.map(n=>`<div class="nc-item" data-notice-id="${n.id}">
+  el.innerHTML=items.map(n=>`<div class="nc-item" data-notice-id="${escapeHtml(n.id)}">
     <div class="${readMap[n.id]?'':'nc-dot'}"></div>
     <div style="flex:1">
       <div class="fw6 sm">${escapeHtml(n.text.slice(0,60))}…</div>
@@ -510,7 +510,7 @@ function stRenderDetail(el){
   <div class="card">
     <div class="card-hd">📌 ${T('tkRules')}</div>
     <div class="tk-rules">${escapeHtml(t.description||'')}</div>
-    <button class="btn tk-open" data-u="${link}" onclick="openLink(this.dataset.u)">🔗 ${T('openTaskBtn').replace(/^🔗\s*/,'')}</button>
+    <button class="btn tk-open" data-u="${escapeHtml(link)}" onclick="openLink(this.dataset.u)">🔗 ${T('openTaskBtn').replace(/^🔗\s*/,'')}</button>
   </div>`;
 
   let proofBlock = '';
@@ -642,7 +642,7 @@ async function loadMySubmissions(){
 }
 
 // ── Image Compress function ────────────────────────────
-function compressImage(file, maxKB=100){
+function compressImage(file, maxKB=100, maxW=800){
   return new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = e => {
@@ -650,7 +650,7 @@ function compressImage(file, maxKB=100){
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let w = img.width, h = img.height;
-        if(w > 800){ h = Math.round(h * 800 / w); w = 800; }
+        if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
         canvas.width = w;
         canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
@@ -667,6 +667,7 @@ function compressImage(file, maxKB=100){
         while(n--) u8[n] = bstr.charCodeAt(n);
         resolve(new File([u8], 'proof.jpg', {type:'image/jpeg'}));
       };
+      img.onerror = () => resolve(file);
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -795,12 +796,12 @@ async function submitTaskProof(taskId){
       if(c.file){
         setBusy('⏳ Uploading photo '+(proofs.filter(p=>p.type==='photo').length+1)+'...');
         const storagePath = `${uid}/${subId}_${c.i}.jpg`;
-        const {error: upErr} = await sb.storage.from('proofs').upload(storagePath, c.file, {upsert:true});
+        const {error: upErr} = await sb.storage.from('proofs').upload(storagePath, c.file, {upsert:false, contentType:'image/jpeg'});
         if(upErr){ await failAndRelease(T('photoUploadFailedMsg')+' '+upErr.message); return; }
         uploaded.push(storagePath);
-        const {data: urlData} = sb.storage.from('proofs').getPublicUrl(storagePath);
-        if(!firstPhotoUrl) firstPhotoUrl = urlData.publicUrl;
-        proofs.push({label, type:'photo', value:urlData.publicUrl});
+        // bucket এখন প্রাইভেট — public লিংকের বদলে storage path রাখা হয় (admin signed লিংকে দেখে)
+        if(!firstPhotoUrl) firstPhotoUrl = storagePath;
+        proofs.push({label, type:'photo', value:storagePath});
       } else {
         proofs.push({label, type:'text', value:c.text});
       }
