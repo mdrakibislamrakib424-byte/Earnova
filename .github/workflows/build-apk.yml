@@ -5,14 +5,26 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# সবচেয়ে কম অনুমতি: এই workflow শুধু কোড পড়তে পারে, repo-তে কিছু লিখতে পারে না
+permissions:
+  contents: read
+
+# একই branch-এ নতুন push এলে পুরনো বিল্ড বাতিল (সময়/মিনিট বাঁচে)
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     name: Build Android APK
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
 
       - name: ⬇️ Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: 🟢 Node.js 24
         uses: actions/setup-node@v4
@@ -31,10 +43,34 @@ jobs:
         with:
           packages: 'platform-tools'
 
-      - name: 📦 npm install
-        run: npm install
+      # repo-তে ভুল করে গোপন ফাইল (private key, keystore ইত্যাদি) থেকে গেলে সতর্ক করে (বিল্ড থামায় না)
+      - name: 🔎 Repo safety check
+        run: |
+          found=$(git ls-files | grep -Ei '(^|/)(serviceaccount[^/]*\.json|google-services\.json|[^/]*\.(keystore|jks|pem|p12|pfx)|\.env[^/]*)$' || true)
+          if [ -n "$found" ]; then
+            echo "::warning title=গোপন ফাইল repo-তে আছে::এই ফাইলগুলো repo থেকে মুছুন: $(echo "$found" | tr '\n' ' ')"
+          else
+            echo "✅ repo-তে কোনো গোপন ফাইল নেই"
+          fi
 
-      - name: 🔨 Build www/ (index.html + sw.js কপি করা)
+      # package-lock.json মিললে npm ci (ঠিক সেই সংস্করণ), না মিললে npm install + নতুন lock সেভ
+      - name: 📦 Install dependencies
+        run: |
+          if npm ci --no-audit --no-fund; then
+            echo "✅ npm ci — lockfile অনুযায়ী ঠিক সংস্করণ বসেছে"
+          else
+            echo "::warning title=package-lock.json মেলেনি::npm install দিয়ে চালানো হলো। নিচের 'package-lock' artifact নামিয়ে repo-তে কমিট করলে পরের বার npm ci কাজ করবে।"
+            npm install --no-audit --no-fund
+          fi
+
+      - name: 💾 Save generated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock
+          path: package-lock.json
+          retention-days: 14
+
+      - name: 🔨 Build www/ (minify + vendor libs + secret scan)
         run: node scripts/build.js
 
       # android/ ফোল্ডার না থাকলে বানাবে
@@ -50,62 +86,6 @@ jobs:
 
       - name: 🔄 Capacitor sync
         run: npx cap sync android
-
-      # ⚠️ নতুন — Google/Facebook Social Login এর জন্য দরকার
-      # ১) OAuth callback deep link (শুধু Facebook-এর জন্য — Google নেটিভ
-      #    প্লাগিন দিয়ে হয়, কোনো deep link লাগে না)
-      # ২) Facebook App ID/Client Token — GitHub Secrets থেকে আসে, যাতে
-      #    এই মান রিপোতে প্লেইনটেক্সটে না থাকে
-      - name: 🔗 Inject OAuth callback intent-filter + Facebook config
-        env:
-          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
-          FACEBOOK_CLIENT_TOKEN: ${{ secrets.FACEBOOK_CLIENT_TOKEN }}
-        run: |
-          python3 << 'PYEOF'
-          import os, re
-
-          manifest_path = 'android/app/src/main/AndroidManifest.xml'
-          with open(manifest_path) as f:
-              content = f.read()
-
-          # ── ১) OAuth callback intent-filter (earnova://oauth-callback) ──
-          if 'android:host="oauth-callback"' in content:
-              print("ℹ️ OAuth callback intent-filter ইতিমধ্যেই আছে, স্কিপ করা হলো")
-          else:
-              oauth_filter = (
-                  '\n        <intent-filter>\n'
-                  '            <action android:name="android.intent.action.VIEW" />\n'
-                  '            <category android:name="android.intent.category.DEFAULT" />\n'
-                  '            <category android:name="android.intent.category.BROWSABLE" />\n'
-                  '            <data android:scheme="earnova" android:host="oauth-callback" />\n'
-                  '        </intent-filter>\n'
-              )
-              m = re.search(r'(<activity[^>]*android:name="\.MainActivity"[^>]*>)(.*?)(</activity>)', content, flags=re.DOTALL)
-              if not m:
-                  print("⚠️ MainActivity ট্যাগ খুঁজে পাওয়া যায়নি — OAuth callback intent-filter স্কিপ করা হলো।")
-              else:
-                  content = content[:m.start()] + m.group(1) + m.group(2) + oauth_filter + m.group(3) + content[m.end():]
-                  print("✅ OAuth callback intent-filter (earnova://oauth-callback) যোগ করা হলো")
-
-          fb_app_id = os.environ.get('FACEBOOK_APP_ID', '').strip()
-          fb_client_token = os.environ.get('FACEBOOK_CLIENT_TOKEN', '').strip()
-
-          # ── ২) Facebook meta-data (শুধু secret দেওয়া থাকলে) ──
-          if not fb_app_id or not fb_client_token:
-              print("⚠️ FACEBOOK_APP_ID/FACEBOOK_CLIENT_TOKEN secret নেই — Facebook Login স্কিপ করা হলো, build তবু চলবে।")
-          elif 'com.facebook.sdk.ApplicationId' in content:
-              print("ℹ️ Facebook meta-data ইতিমধ্যেই আছে, স্কিপ করা হলো")
-          else:
-              fb_meta = (
-                  f'<meta-data android:name="com.facebook.sdk.ApplicationId" android:value="fb{fb_app_id}"/>\n'
-                  f'        <meta-data android:name="com.facebook.sdk.ClientToken" android:value="{fb_client_token}"/>'
-              )
-              content = re.sub(r'(<application[^>]*>)', r'\1\n        ' + fb_meta, content, count=1)
-              print("✅ Facebook App ID/Client Token AndroidManifest.xml এ যোগ করা হলো")
-
-          with open(manifest_path, 'w') as f:
-              f.write(content)
-          PYEOF
 
       - name: 📢 Inject AdMob App ID into AndroidManifest.xml
         run: |
@@ -136,7 +116,7 @@ jobs:
           GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GOOGLE_SERVICES_JSON" ]; then
-            echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+            printf '%s' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
           else
             echo "⚠️ GOOGLE_SERVICES_JSON secret নেই — push notification কাজ করবে না, build তবু চলবে।"
           fi
@@ -155,21 +135,53 @@ jobs:
             echo "⚠️ google-services.json নেই — Google Services প্লাগিন স্কিপ করা হলো।"
           fi
 
+      # ⚠️ secret গুলো সরাসরি স্ক্রিপ্টের টেক্সটে না বসিয়ে env দিয়ে দেওয়া হয় (নিরাপদ পদ্ধতি)
       - name: 🔑 Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/earnova.keystore
-        
-      - name: 🔍 Print SHA1 Fingerprint
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          keytool -list -v -keystore android/app/earnova.keystore -alias ${{ secrets.KEY_ALIAS }} -storepass ${{ secrets.KEYSTORE_PASS }}
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > android/app/earnova.keystore
+          chmod 600 android/app/earnova.keystore
+          if [ ! -s android/app/earnova.keystore ]; then
+            echo "::error title=Keystore খালি::KEYSTORE_BASE64 secret ঠিকভাবে বসানো হয়নি"
+            exit 1
+          fi
+
+      # Firebase/Google Console-এ দেওয়ার জন্য fingerprint (শুধু fingerprint ছাপে, পাসওয়ার্ড নয়)
+      - name: 🔍 Print SHA1 / SHA256 fingerprint
+        env:
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: |
+          keytool -list -v -keystore android/app/earnova.keystore -alias "$KEY_ALIAS" -storepass:env KEYSTORE_PASS | grep -E "Alias name|SHA1:|SHA256:"
+
       - name: 🏗️ Build Release APK
         working-directory: android
+        env:
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.KEY_PASS }}
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$GITHUB_WORKSPACE/android/app/earnova.keystore \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTORE_PASS }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASS }}
+            -Pandroid.injected.signing.store.file="$GITHUB_WORKSPACE/android/app/earnova.keystore" \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASS" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASS"
+
+      # APK সত্যিই সাইন করা কি না যাচাই + checksum (পরে ফাইল বদলেছে কি না মেলানোর জন্য)
+      - name: ✅ Verify signature + checksum
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          sha256sum "$APK"
+          AS=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$AS" ]; then
+            "$AS" verify --print-certs "$APK" > /tmp/apk-sig.txt
+            grep -E "Signer #1 certificate (DN|SHA-256)" /tmp/apk-sig.txt || true
+            echo "✅ APK এর signature বৈধ"
+          else
+            echo "ℹ️ apksigner পাওয়া যায়নি — signature যাচাই স্কিপ"
+          fi
 
       - name: 📤 Upload APK
         uses: actions/upload-artifact@v4
@@ -178,8 +190,7 @@ jobs:
           path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
-      - name: 🎉 GitHub Release (tag push হলে)
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: android/app/build/outputs/apk/release/app-release.apk
+      # runner-এ keystore ফাইল যেন কোনোভাবেই থেকে না যায়
+      - name: 🧹 Remove keystore
+        if: always()
+        run: rm -f android/app/earnova.keystore
