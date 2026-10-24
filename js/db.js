@@ -100,11 +100,16 @@ function msToHM(ms){
 
 // ─── AUTH FUNCTIONS ───────────────────────────────────
 async function doRegister(name,email,pw,refCode,captchaToken){
+  // Captcha ছাড়া সাইন-আপ নয় (বট ঠেকাতে)
+  if(typeof captchaRequired==='function' && captchaRequired() && !captchaToken){
+    toast('⚠️ আগে "আমি রোবট নই" ভেরিফাই করুন','w'); return;
+  }
   // Device check
+  await ensureDeviceId();
   const devId=getDeviceId();
-  const usersSnap=await fDB.ref('users').orderByChild('device_id').equalTo(devId).once('value');
-  const devUsers=usersSnap.val()||{};
-  if(Object.keys(devUsers).length>=CFG.maxDevAcc){
+  let devCount=0;
+  try{ const {data:dcnt} = await sb.rpc('ez_device_count', {p_device: devId, p_except: ''}); devCount = parseInt(dcnt||0); }catch(e){}
+  if(devCount>=CFG.maxDevAcc){
     if(typeof hxShowDevLimit==='function') hxShowDevLimit(); else toast(T('mx'),'e'); return;
   }
   // Email duplicate check — Supabase এ আগে থেকে আছে কিনা
@@ -118,10 +123,10 @@ async function doRegister(name,email,pw,refCode,captchaToken){
   // Ref code validation
   let refByUid=null;
   if(refCode){
-    const snap=await fDB.ref('users').orderByChild('ref_code').equalTo(refCode.toUpperCase()).once('value');
-    const found=snap.val();
-    if(!found){ toast(T('rnf'),'e'); return; }
-    refByUid=Object.keys(found)[0];
+    let ownerUid=null;
+    try{ const {data:ownerData} = await sb.rpc('ref_code_owner', {p_code: refCode}); ownerUid = ownerData || null; }catch(e){}
+    if(!ownerUid){ toast(T('rnf'),'e'); return; }
+    refByUid=ownerUid;
     if(refByUid===S.user?.uid){ toast(T('rs2'),'e'); return; }
   }
   try{
@@ -136,7 +141,7 @@ async function doRegister(name,email,pw,refCode,captchaToken){
     // থাকলে নতুন করে জেনারেট করে আবার চেষ্টা করা হয় (সর্বোচ্চ ৫ বার)।
     let code = genRef();
     for(let attempt=0; attempt<5; attempt++){
-      const {data:codeExists} = await sb.from('users').select('id').eq('ref_code', code).maybeSingle();
+      const {data:codeExists} = await sb.rpc('ref_code_owner', {p_code: code});
       if(!codeExists) break; // ইউনিক পাওয়া গেছে
       code = genRef();
     }
@@ -252,6 +257,9 @@ async function completeUserLogin(u){
 // captchaToken — hCaptcha/Turnstile থেকে পাওয়া টোকেন (Supabase Attack
 // Protection চালু থাকলে বাধ্যতামূলক, না থাকলে undefined পাঠালেও সমস্যা নেই)
 async function doLogin(email,pw,captchaToken){
+  if(typeof captchaRequired==='function' && captchaRequired() && !captchaToken){
+    toast('⚠️ আগে "আমি রোবট নই" ভেরিফাই করুন','w'); return;
+  }
   try{
     const {data, error} = await sb.auth.signInWithPassword({
       email, password:pw,
@@ -312,16 +320,14 @@ async function ensureUserRecord(u, extraName){
   const devId = getDeviceId();
   let code = genRef();
   for(let attempt=0; attempt<5; attempt++){
-    const {data:codeExists} = await sb.from('users').select('id').eq('ref_code', code).maybeSingle();
+    const {data:codeExists} = await sb.rpc('ref_code_owner', {p_code: code});
     if(!codeExists) break;
     code = genRef();
   }
   const savedRef = localStorage.getItem('ez_ref') || '';
   let refByUid = null;
   if(savedRef){
-    const snap = await fDB.ref('users').orderByChild('ref_code').equalTo(savedRef.toUpperCase()).once('value');
-    const found = snap.val();
-    if(found) refByUid = Object.keys(found)[0];
+    try{ const {data:ownerData2} = await sb.rpc('ref_code_owner', {p_code: savedRef}); if(ownerData2) refByUid = ownerData2; }catch(e){}
   }
 
   const userData = {
@@ -363,8 +369,7 @@ async function _googleQuietSignOut(){
 }
 
 async function _deviceAccountCount(){
-  const snap = await fDB.ref('users').orderByChild('device_id').equalTo(getDeviceId()).once('value');
-  return Object.keys(snap.val() || {}).length;
+  try{ await ensureDeviceId(); const {data:dcnt2} = await sb.rpc('ez_device_count', {p_device: getDeviceId(), p_except: ''}); return parseInt(dcnt2||0); }catch(e){ return 0; }
 }
 
 async function signInWithGoogle(mode){
@@ -431,45 +436,6 @@ async function signInWithGoogle(mode){
   }
 }
 
-/**
- * Facebook — সিস্টেম ব্রাউজারে Supabase-এর OAuth authorize URL খোলে।
- * ইউজার ফিরে এলে (earnova://oauth-callback?code=...) app-events.js এর
- * initSocialLoginCallback() এটা ধরে exchangeCodeForSession() কল করে এবং
- * completeFacebookLogin() কে ডাকে (নিচে)।
- */
-async function signInWithFacebook(){
-  if(!window.Capacitor?.Plugins?.Browser){
-    toast(T('socialLoginFailedMsg'),'e'); return;
-  }
-  try{
-    const { Browser } = window.Capacitor.Plugins;
-    const authUrl = `${SUPA_URL}/auth/v1/authorize?provider=facebook&redirect_to=earnova://oauth-callback`;
-    await Browser.open({ url: authUrl });
-    // বাকিটা app-events.js এর appUrlOpen listener হ্যান্ডেল করবে
-  }catch(e){
-    console.error('Facebook login open error:', e);
-    toast(T('socialLoginFailedMsg'),'e');
-  }
-}
-
-/** app-events.js এর OAuth deep-link listener থেকে কল হয় (code পাওয়ার পর) */
-async function completeSocialOAuthLogin(code){
-  try{
-    const { data, error } = await sb.auth.exchangeCodeForSession(code);
-    if(error) throw error;
-    const u = data.user;
-    if(window.Capacitor?.Plugins?.Browser){
-      try{ await window.Capacitor.Plugins.Browser.close(); }catch(e){}
-    }
-    await ensureUserRecord(u, u.user_metadata?.full_name || u.user_metadata?.name);
-    trackEvent('sign_up_or_login', { method:'facebook' });
-    await completeUserLogin(u);
-  }catch(e){
-    console.error('Facebook OAuth callback error:', e);
-    toast(T('socialLoginFailedMsg'),'e');
-  }
-}
-
 function doLogout(){
   fAuth.signOut();
   S.user=null; S.userData=null;
@@ -482,22 +448,13 @@ function doLogout(){
 
 async function doForgotPw(email,captchaToken){
   if(!email){ toast(T('enterEmailMsg'),'e'); return; }
-  // Check if already used (if user is logged in)
-  if(S.userData?.forgotUsed){
-    toast(T('fpn'),'w'); return;
+  if(typeof captchaRequired==='function' && captchaRequired() && !captchaToken){
+    toast('⚠️ আগে "আমি রোবট নই" ভেরিফাই করুন','w'); return;
   }
   try{
-    // Check user exists
-    const snap=await fDB.ref('users').orderByChild('email').equalTo(email).once('value');
-    const found=snap.val();
-    if(found){
-      const uid=Object.keys(found)[0];
-      if(found[uid].forgotUsed){ toast(T('fpn'),'w'); return; }
-      await fAuth.sendPasswordResetEmail(email,captchaToken);
-      await fDB.ref(`users/${uid}/forgotUsed`).set(true);
-    } else {
-      await fAuth.sendPasswordResetEmail(email,captchaToken);
-    }
+    // সবসময় একই কাজ: রিসেট ইমেইল পাঠানো (অ্যাকাউন্ট আছে কি না তা আর বোঝা যায় না);
+    // বারবার পাঠানো আটকায় Supabase এর নিজস্ব rate-limit + captcha
+    await fAuth.sendPasswordResetEmail(email,captchaToken);
     // ⚠️ নতুন: এখন এখানে থামা যাবে না — লগইন পেজে ফেরত না পাঠিয়ে
     // OTP-কোড + নতুন-পাসওয়ার্ড দেওয়ার স্ক্রিনে পাঠানো হচ্ছে
     S.resetEmail = email; // পরের ধাপে (confirmPasswordResetOtp) কাজে লাগবে
@@ -717,6 +674,10 @@ const fAuth = {
       options: { captchaToken: captchaToken || undefined }
     });
     if(error) throw {code: error.message, message: error.message};
+    // Email-confirm চালু থাকলে আগে থেকে থাকা ইমেইলে Supabase error দেয় না, শুধু identities খালি আসে
+    if(data && data.user && Array.isArray(data.user.identities) && data.user.identities.length===0){
+      throw {code:'User already registered', message:'User already registered'};
+    }
     return {user: _mapUser(data.user)};
   },
 
@@ -759,8 +720,7 @@ const fAuth = {
 
 function _mapUser(u){
   if(!u) return null;
-  const isVerified = !!(u.email_confirmed_at || u.confirmed_at || 
-                        u.user_metadata?.email_verified);
+  const isVerified = !!(u.email_confirmed_at || u.confirmed_at);
   return {
     ...u,
     uid: u.id,
