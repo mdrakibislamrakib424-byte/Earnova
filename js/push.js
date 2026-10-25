@@ -28,7 +28,7 @@ let fcmApp = null, fcmMessaging = null;
 const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
 
 // ── FCM init — app load হলেই চলে ──
-(async function initFCM(){
+const _pushInitDone = (async function initFCM(){
   try{
     if(isNativeApp && window.Capacitor?.Plugins?.PushNotifications){
       // নেটিভ Android APK — Capacitor PushNotifications প্লাগিন (আসল native FCM)
@@ -47,14 +47,17 @@ const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && 
         await PushNotifications.createChannel({ id:'general', name:'General Announcements',          description:'সাধারণ ঘোষণা ও আপডেট',              importance:3, visibility:1 });
       }catch(e){ console.warn('Channel creation failed (Android 8+ এ কাজ করে)', e); }
 
+      // listener আগে বসানো হয় — লগইনের আগে টোকেন এলেও S.fcmToken এ জমা থাকে,
+      // লগইনের পর ezSaveFcmToken() সেটা ডাটাবেসে সেভ করে (আগে এখানে টোকেন হারিয়ে যেত)
+      PushNotifications.addListener('registration', async (token)=>{
+        S.fcmToken = token.value;
+        await ezSaveFcmToken();
+      });
+      PushNotifications.addListener('registrationError', (e)=>{ console.warn('FCM registrationError', e); });
+
       const perm = await PushNotifications.checkPermissions();
       S.pushEnabled = perm.receive === 'granted';
       if(S.pushEnabled) await PushNotifications.register();
-
-      PushNotifications.addListener('registration', async (token)=>{
-        S.fcmToken = token.value;
-        if(S.user?.uid) await fDB.ref(`users/${S.user.uid}`).update({ fcmToken: token.value });
-      });
       PushNotifications.addListener('pushNotificationReceived', (n)=>{
         toast(`🔔 ${n.title||''}`, 's', 4000);
       });
@@ -77,6 +80,65 @@ const isNativeApp = !!(window.Capacitor && window.Capacitor.isNativePlatform && 
   }catch(e){ console.warn('FCM init failed', e); }
 })();
 
+// ── টোকেন ডাটাবেসে সেভ (শুধু বদলালে) ──
+async function ezSaveFcmToken(){
+  try{
+    const uid = S.user?.uid, tok = S.fcmToken;
+    if(!uid || !tok) return;
+    if(S.userData && S.userData.fcmToken === tok) return;
+    const { error } = await sb.from('users').update({ fcm_token: tok }).eq('id', uid);
+    if(!error && S.userData) S.userData.fcmToken = tok;
+  }catch(e){ console.warn('FCM token save failed', e); }
+}
+
+// ── লগইনের পর একবার চলে: আগে নোটিফিকেশন পারমিশন নেয় (একবারই), তারপর টোকেন সেভ করে ──
+// অ্যাপ খোলার সময় (লগইন করা থাকলেও) চলে → পারমিশন দেওয়া থাকলে টোকেন চুপচাপ নতুন হয়।
+let _pushSetupUid = null;
+async function ezSetupPush(){
+  try{
+    const uid = S.user?.uid;
+    if(!uid || _pushSetupUid === uid) return;
+    _pushSetupUid = uid;
+    try{ await _pushInitDone; }catch(e){}
+
+    if(isNativeApp && window.Capacitor?.Plugins?.PushNotifications){
+      const { PushNotifications } = window.Capacitor.Plugins;
+      let perm = await PushNotifications.checkPermissions();
+      let st = perm.receive;
+      const askKey = 'ez_push_asked_' + uid;
+      let asked = false; try{ asked = !!localStorage.getItem(askKey); }catch(e){}
+
+      // কখনো জিজ্ঞেস করা হয়নি → এখনই একবার পারমিশন চাই (টিউটোরিয়ালের আগে)
+      if(st !== 'granted' && st !== 'denied' && !asked){
+        try{ localStorage.setItem(askKey, '1'); }catch(e){}
+        try{ perm = await PushNotifications.requestPermissions(); st = perm.receive; }catch(e){}
+      }
+      S.pushEnabled = st === 'granted';
+      S.pushNeedsHelp = !S.pushEnabled;   // ব্যানার শুধু তাদের জন্য যারা Allow দেয়নি
+      if(S.pushEnabled){
+        await PushNotifications.register();   // 'registration' event → টোকেন সেভ
+        await ezSaveFcmToken();
+      }
+    } else if('Notification' in window){
+      // ব্রাউজার/PWA: ব্রাউজার user-click ছাড়া পারমিশন চাইতে দেয় না → ব্যানার থাকবে
+      S.pushEnabled = Notification.permission === 'granted';
+      S.pushNeedsHelp = !S.pushEnabled;
+      if(S.pushEnabled && fcmMessaging) await registerFcmWebToken();
+    }
+    render();
+  }catch(e){ console.warn('ezSetupPush failed', e); }
+}
+
+// ── লগআউটের সময়: এই ডিভাইসের টোকেন ইউজারের রো থেকে সরানো (অন্য অ্যাকাউন্টে লগইন করলে পুরোনো অ্যাকাউন্ট রিমাইন্ডার পাবে না) ──
+async function ezOnLogoutPush(uid){
+  _pushSetupUid = null;
+  S.pushNeedsHelp = false;
+  try{
+    if(uid) await sb.from('users').update({ fcm_token: '' }).eq('id', uid);
+    S.fcmToken = '';
+  }catch(e){}
+}
+
 async function registerFcmWebToken(){
   try{
     const token = await fcmMessaging.getToken({ vapidKey: FCM_VAPID_KEY });
@@ -94,11 +156,21 @@ async function enablePush(){
       const { PushNotifications } = window.Capacitor.Plugins;
       const perm = await PushNotifications.requestPermissions();
       S.pushEnabled = perm.receive === 'granted';
-      if(S.pushEnabled){ await PushNotifications.register(); toast(T('pushEnabledMsg'),'s'); render(); }
+      if(S.pushEnabled){
+        S.pushNeedsHelp = false;
+        await PushNotifications.register(); await ezSaveFcmToken();
+        toast(T('pushEnabledMsg'),'s'); render();
+      } else {
+        // আগে Deny করা থাকলে Android আর পপআপ দেখায় না — ফোনের সেটিং থেকে চালু করতে হবে
+        toast(S.lang==='bn'
+          ? 'ফোনের Settings → Apps → EARNOVA → Notifications থেকে চালু করুন'
+          : 'Turn on from phone Settings → Apps → EARNOVA → Notifications','w',6000);
+      }
     } else if('Notification' in window){
       const perm = await Notification.requestPermission();
       S.pushEnabled = perm === 'granted';
       if(S.pushEnabled){
+        S.pushNeedsHelp = false;
         if(!fcmMessaging){ fcmApp = firebase.apps.length ? firebase.app() : firebase.initializeApp(FCM_CONFIG); fcmMessaging = firebase.messaging(); }
         await registerFcmWebToken();
         toast(T('pushEnabledMsg'),'s'); render();
