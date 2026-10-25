@@ -1151,7 +1151,7 @@ function buildHome(){
        নেটিভ App-এর ভেতরে দেখানো অর্থহীন, কারণ ইউজার তো আগে থেকেই App-এর ভেতরে) -->
 
   <!-- PUSH NOTIFICATION BANNER -->
-  ${!S.pushEnabled && !(typeof Notification!=='undefined' && Notification.permission==='granted')?`<div class="push-banner" onclick="enablePush()">
+  ${S.pushNeedsHelp && !S.pushEnabled?`<div class="push-banner" onclick="enablePush()">
     <span style="font-size:24px">🔔</span>
     <div style="flex:1">
       <div style="font-size:13px;font-weight:700;color:#fff">${T('enableNotifTitle')}</div>
