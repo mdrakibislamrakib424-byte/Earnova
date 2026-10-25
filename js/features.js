@@ -26,10 +26,27 @@ function getUserLevel(totalEarned){
 // পুরস্কারের হিসাব (কত টাকা, আজ পেয়েছে কি না) এখন Supabase সার্ভারে হয়; ফোন শুধু ফলাফল দেখায়।
 function ezUtcDay(){ return new Date().toISOString().slice(0,10); }          // সার্ভারের তারিখের ধরন (UTC)
 function ezIsToday(v){ return !!v && (v===new Date().toDateString() || v===ezUtcDay()); }  // নতুন ও পুরোনো দুই ধরনের তারিখ চেনে
-function ezApplyLocalReward(amt){
-  // সার্ভারে ইতিমধ্যে জমা হয়েছে; এটা শুধু স্ক্রিনের সংখ্যা সাথে সাথে বদলায় (realtime পরে আসল মান বসাবে)
+// সার্ভার থেকে নিজের আসল ব্যালেন্স পড়ে স্ক্রিনের সংখ্যা ঠিক করে (সার্ভারেই যোগ হয়েছে, তাই এটাই সত্যি মান)।
+// ⚠️ আগে এখানে ফোনে আলাদা করে যোগ করা হতো — realtime আগেই আসল মান বসিয়ে দিলে তখন দুবার যোগ হয়ে
+//    স্ক্রিনে দ্বিগুণ দেখাত (Spin-এ ৪ সেকেন্ড পরে যোগ হওয়ায় সবচেয়ে বেশি)। এখন শুধু সার্ভারের মান বসে।
+async function ezSyncBalance(){
+  try{
+    if(!S.user?.uid || !S.userData) return false;
+    const { data, error } = await sb.from('users')
+      .select('usd_earned,today_earned,today_date').eq('id', S.user.uid).maybeSingle();
+    if(error || !data) return false;
+    S.userData.usdEarned   = parseFloat(data.usd_earned)  || 0;
+    S.userData.todayEarned = parseFloat(data.today_earned)|| 0;
+    if(data.today_date) S.userData.todayDate = data.today_date;
+    try{ EZCache.invalidate(`users/${S.user.uid}`); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
+async function ezApplyLocalReward(amt){
   amt = parseFloat(amt)||0;
   if(!S.userData || !(amt>0)) return;
+  if(await ezSyncBalance()) return;          // সার্ভারের মান বসেছে — কিছু যোগ করার দরকার নেই
+  // নেটওয়ার্ক না পেলে শুধু তখনই আনুমানিক যোগ (পরের realtime/রিফ্রেশে আসল মান বসবে)
   S.userData.usdEarned = (parseFloat(S.userData.usdEarned)||0) + amt;
   const t = new Date().toDateString();
   S.userData.todayEarned = (S.userData.todayDate===t ? (parseFloat(S.userData.todayEarned)||0) : 0) + amt;
@@ -53,7 +70,7 @@ async function updateLoginStreak(uid, ud){
     const streak = parseInt(data.streak||0), bonus = parseFloat(data.bonus||0);
     if(S.userData){ S.userData.loginStreak = streak; S.userData.lastLoginDate = ezUtcDay(); }
     if(bonus>0){
-      ezApplyLocalReward(bonus);
+      await ezApplyLocalReward(bonus);
       toast(`🔥 7-day streak! +$${bonus.toFixed(2)} bonus!`,'s',4000);
       sendLocalNotif('🔥 Streak Bonus!',`7-day streak! You earned +$${bonus.toFixed(2)}`);
     } else if(streak>1){
@@ -72,7 +89,7 @@ async function checkDailyBonus(uid, ud){
     if(S.userData) S.userData.dailyBonusDate = ezUtcDay();
     const bonus = parseFloat(data||0);
     if(!(bonus>0)) return;
-    ezApplyLocalReward(bonus);
+    await ezApplyLocalReward(bonus);
     toast(`🎁 Daily Login Bonus: +$${bonus.toFixed(2)}!`,'s',3500);
     sendLocalNotif('🎁 Daily Bonus!',`You earned $${bonus.toFixed(2)} for logging in today!`);
   }catch(e){ /* পরের বার আবার চেষ্টা হবে */ }
@@ -186,9 +203,9 @@ async function doSpin(){
   const disc = document.getElementById('spinWheelDisc');
   if(disc) disc.style.transform = `rotate(${targetAngle}deg)`;
 
-  setTimeout(()=>{
+  setTimeout(async ()=>{
     try{
-      ezApplyLocalReward(prize.amount);   // সার্ভারে আগেই জমা হয়ে গেছে; এখানে শুধু স্ক্রিন আপডেট
+      await ezApplyLocalReward(prize.amount);   // সার্ভারে আগেই জমা হয়ে গেছে; এখানে শুধু স্ক্রিন আপডেট
       if(S.userData) S.userData.lastSpinDate = ezUtcDay();
       const msgEl=document.getElementById('spinResultMsg');
       if(msgEl) msgEl.textContent = `🎉 You won $${prize.amount.toFixed(2)}!`;
@@ -734,7 +751,7 @@ async function quizFinish(idx, val){
     q.prog[idx] = ok;
     if(ok){
       const rw = parseFloat(r.reward||0);
-      ezApplyLocalReward(rw);
+      await ezApplyLocalReward(rw);
       toast('✅ '+T('qzRight')+' +'+fmt$(rw),'s',3200);
     } else {
       toast('❌ '+T('qzWrong'),'e',3200);
