@@ -359,10 +359,11 @@ fAuth.onAuthStateChanged(async user=>{
       // STEP 9: Non-blocking extras
       initDarkMode();
       initPWA();
-      // 🆕 প্রথমবার App ব্যবহার করলে ৪-স্লাইড টিউটোরিয়াল দেখাও (একবারই, localStorage flag দিয়ে)
-      if(!localStorage.getItem('ez_onboarding_done')) setTimeout(showOnboardingTutorial, 600);
-      // pushEnabled — FCM init থেকে পরে set হবে (initFCM() এ), এখানে আপাতত false
-      S.pushEnabled = false;
+      // 🆕 আগে নোটিফিকেশন পারমিশন (একবার), তারপর প্রথমবার হলে ৪-স্লাইড টিউটোরিয়াল
+      (async()=>{
+        try{ await ezSetupPush(); }catch(e){}
+        try{ if(!localStorage.getItem('ez_onboarding_done')) setTimeout(showOnboardingTutorial, 300); }catch(e){}
+      })();
       if(S.userData){
         checkDailyBonus(user.uid, S.userData);
         updateLoginStreak(user.uid, S.userData);
