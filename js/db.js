@@ -437,7 +437,15 @@ async function signInWithGoogle(mode){
 }
 
 function doLogout(){
-  fAuth.signOut();
+  // আগে এই ডিভাইসের push টোকেন সরাও (সর্বোচ্চ ১.৫ সেকেন্ড অপেক্ষা), তারপর signOut
+  const _lgUid = S.user?.uid;
+  (async()=>{
+    try{
+      if(typeof ezOnLogoutPush==='function')
+        await Promise.race([ezOnLogoutPush(_lgUid), new Promise(r=>setTimeout(r,1500))]);
+    }catch(e){}
+    fAuth.signOut();
+  })();
   S.user=null; S.userData=null;
   S.page='login'; S.sidebarOpen=false;
   S.unsubscribes.forEach(u=>{ try{ if(typeof u==='function') u(); }catch(e){} });
