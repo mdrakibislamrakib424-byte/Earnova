@@ -461,14 +461,14 @@ const CFG = {
     {id:'w17', name:'OfferWall Offers', icon:'🌐', color:'#2563eb'},
     {id:'w18', name:'Info Wall Offers', icon:'📋', color:'#ec4899'},
     {id:'w19', name:'AdWeb Offers',     icon:'🖥️', color:'#ef4444'},
-    {id:'w20', name:'Wall.com Offers',  icon:'🏆', color:'#f59e0b'},
+    {id:'w20', name:'FlexMedia Offers',  icon:'🏆', color:'#f59e0b'},
   ],
   // ── এখানে প্রতিটা wall এর iframe লিংক বসান — খালি রাখলে সেই কার্ড দেখাবে না ──
   wallLinks:{
     w1:'',  w2:'',  w3:'',  w4:'',  w5:'',
     w6:'',  w7:'',  w8:'',  w9:'',  w10:'',
     w11:'', w12:'https://earn.wannads.com/wall?apiKey=6ab98011d2882365815928', w13:'', w14:'', w15:'',
-    w16:'', w17:'', w18:'', w19:'', w20:'',
+    w16:'', w17:'', w18:'', w19:'', w20:'https://flexmediax.link/wall?uid=414&wall=p0J6xdNrmQ',
   },
 };
 
