@@ -464,6 +464,10 @@ const CFG = {
     {id:'w20', name:'FlexMedia Offers',  icon:'🏆', color:'#f59e0b'},
   ],
   // ── এখানে প্রতিটা wall এর iframe লিংক বসান — খালি রাখলে সেই কার্ড দেখাবে না ──
+  // ── Boost site card (Home/Wall/Offers) — লিংক খালি রাখলে card লুকানো থাকে ──
+  boostSiteLink:'https://earn-zone349.github.io/Earnova-boost/',
+  // ── যে wall অ্যাপের ভেতরেই (iframe) দেখাবে; false = আগের মতো ব্রাউজারে ──
+  wallEmbed:{ w20:true },
   wallLinks:{
     w1:'',  w2:'',  w3:'',  w4:'',  w5:'',
     w6:'',  w7:'',  w8:'',  w9:'',  w10:'',
