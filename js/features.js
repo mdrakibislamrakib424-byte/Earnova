@@ -827,3 +827,127 @@ function buildQuizHomeCard(){
     <span class="hx-qzhg">›</span>
   </button>`;
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🌐 IN-APP OFFERWALL (iframe) + 🚀 BOOST SITE CARD   (update 16)
+// ───────────────────────────────────────────────────────────────────────
+// • config.js-এ দুটো সেটিং লাগে (নিচে দেখুন) — না থাকলেও অ্যাপ ভাঙবে না:
+//     CFG.boostSiteLink : 'https://…'   → খালি হলে Boost কার্ড লুকানো থাকে
+//     CFG.wallEmbed     : {w20:true}    → যে wall অ্যাপের ভেতরেই দেখাবে
+//                          (না দিলে শুধু w20 ভেতরে দেখায়; false দিলে আগের মতো নতুন ট্যাব)
+// • কার্ডের ছবি নিজে বানাতে চাইলে: icons/boost-card.png (1200×300 PNG) — থাকলে সেটাই
+//   কার্ডে বসবে, না থাকলে সুন্দর ডিফল্ট কার্ড দেখাবে।
+// • এই অংশ আগের কোনো ফাংশন মুছে না — শুধু wrap/override করে।
+// ═══════════════════════════════════════════════════════════════════════
+const BX_STR = {
+  en:{title:'Boost Followers & Likes', sub:'Grow your social accounts — visit BoostBD', go:'Open',
+      open:'Open in browser ↗', loading:'Loading offers…',
+      hint:'Offers not showing? Tap “Open in browser” above.',
+      note:'Complete offers below — your reward is credited automatically.'},
+  bn:{title:'ফলোয়ার ও লাইক বুস্ট করুন', sub:'আপনার সোশ্যাল অ্যাকাউন্ট বাড়ান — BoostBD', go:'খুলুন',
+      open:'ব্রাউজারে খুলুন ↗', loading:'অফার লোড হচ্ছে…',
+      hint:'অফার না দেখালে উপরের “ব্রাউজারে খুলুন” চাপুন।',
+      note:'নিচের অফারগুলো সম্পন্ন করুন — রিওয়ার্ড নিজে থেকেই জমা হবে।'},
+};
+function bxT(k){ const l = BX_STR[S.lang] || BX_STR.en; return l[k] || BX_STR.en[k] || k; }
+
+(function injectBoostCss(){
+  if(document.getElementById('bxCss')) return;
+  const st = document.createElement('style'); st.id = 'bxCss';
+  st.textContent = `
+.bx-card{position:relative;width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;margin:0 0 12px;border-radius:16px;cursor:pointer;text-align:left;border:none;overflow:hidden;
+  background:radial-gradient(ellipse at 88% 0%,rgba(139,92,246,.35),transparent 56%),linear-gradient(180deg,#1b1450 0%,#0b0a2e 100%);
+  box-shadow:0 0 0 1.5px rgba(167,139,250,.55),0 6px 16px rgba(5,5,30,.3),inset 0 1px 0 rgba(255,255,255,.1);-webkit-tap-highlight-color:transparent}
+.bx-card:active{transform:scale(.99)}
+.bx-in{display:flex;align-items:center;gap:12px;width:100%}
+.bx-ic{font-size:22px;width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(135deg,#8b5cf6,#22d3ee);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+.bx-tx{flex:1;display:flex;flex-direction:column;gap:2px;min-width:0}
+.bx-tx b{font-family:'Syne',sans-serif;font-size:14px;color:#fff}
+.bx-tx small{font-size:11px;color:#b4bdd6}
+.bx-go{font-size:11px;font-weight:800;color:#0b0a2e;background:linear-gradient(135deg,#a78bfa,#22d3ee);padding:7px 12px;border-radius:999px;flex-shrink:0}
+.bx-img{display:none;width:100%;height:auto;border-radius:16px}
+.bx-card.hasimg{padding:0;background:none;box-shadow:none}
+.bx-card.hasimg .bx-in{display:none}
+.bx-card.hasimg .bx-img{display:block}
+.bx-pad{padding:0 16px}
+.bx-wallbar{display:flex;align-items:center;gap:8px;margin:0 16px 10px}
+.bx-wallbar .bx-t{flex:1;min-width:0;font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bx-open{border:none;border-radius:12px;padding:10px 14px;font-size:12px;font-weight:800;cursor:pointer;color:#fff;background:linear-gradient(135deg,#2563eb,#7c3aed);flex-shrink:0}
+.bx-frame-wrap{position:relative;margin:0 12px 12px;border-radius:16px;overflow:hidden;border:1.5px solid rgba(120,130,160,.35);background:#fff;min-height:70vh}
+.bx-frame{display:block;width:100%;height:calc(100vh - 230px);min-height:70vh;border:0;background:#fff}
+.bx-load{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#64748b;pointer-events:none;transition:opacity .3s}
+.bx-hint{margin:0 16px 14px;font-size:11.5px;line-height:1.6;opacity:.75;text-align:center}`;
+  document.head.appendChild(st);
+})();
+
+// ── Boost কার্ড (লিংক না থাকলে খালি string) ──
+function buildBoostCard(){
+  const link = String((CFG && CFG.boostSiteLink) || '').trim();
+  if(!link) return '';
+  return `<button class="bx-card" type="button" onclick="openLink(${jsArg(link)})">
+    <img class="bx-img" src="icons/boost-card.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()">
+    <span class="bx-in">
+      <span class="bx-ic">🚀</span>
+      <span class="bx-tx"><b>${bxT('title')}</b><small>${bxT('sub')}</small></span>
+      <span class="bx-go">${bxT('go')} ›</span>
+    </span>
+  </button>`;
+}
+
+// ── Home: Daily Quiz কার্ডের নিচে Boost কার্ড ──
+(function(){
+  const _quizCard = buildQuizHomeCard;
+  window.buildQuizHomeCard = function(){ return _quizCard() + buildBoostCard(); };
+})();
+
+// ── Wall ট্যাব ও Offers ট্যাব: হেডারের ঠিক নিচে কার্ড ──
+function bxInsertAfterHeader(html){
+  const card = buildBoostCard();
+  if(!card) return html;
+  const wrapped = `<div class="bx-pad">${card}</div>`;
+  const m = html.match(/<div class="ph">[\s\S]*?<\/div>\s*<\/div>/);
+  return m ? html.replace(m[0], m[0] + wrapped) : wrapped + html;
+}
+(function(){
+  const _wall = buildOfferwallPage, _offers = buildOffers;
+  window.buildOfferwallPage = function(){ return bxInsertAfterHeader(_wall()); };
+  window.buildOffers        = function(){ return bxInsertAfterHeader(_offers()); };
+})();
+
+// ── Wall frame: অফার অ্যাপের ভেতরেই (iframe); উপরে "ব্রাউজারে খুলুন" বাটন ──
+function bxWallEmbedOn(wid){
+  const m = (CFG && CFG.wallEmbed);
+  if(m && typeof m === 'object' && wid in m) return !!m[wid];
+  return wid === 'w20';                       // ডিফল্ট: শুধু FlexMedia (w20)
+}
+(function(){
+  const _frame = buildWallFramePage;
+  window.buildWallFramePage = function(){
+    const wid = S.activeWallId;
+    const rawLink = (CFG.wallLinks && CFG.wallLinks[wid]) || '';
+    if(!rawLink || !bxWallEmbedOn(wid)) return _frame();       // আগের আচরণ অক্ষত
+    const w = CFG.walls.find(x=>x.id===wid) || {};
+    const uid = S.user?.uid || 'guest';
+    const param = (CFG.wallSubidParam && CFG.wallSubidParam[wid]) || 'subid';
+    const link = rawLink + (rawLink.includes('?') ? '&' : '?') + param + '=' + encodeURIComponent(uid);
+    // শুধু http(s) লিংক iframe-এ
+    if(!/^https?:\/\//i.test(link)) return _frame();
+    return `<div class="ph">
+      <button class="btn bh bau bsm mb12" data-page="offerwall">← ${T('back')}</button>
+    </div>
+    <div class="bx-wallbar">
+      <div class="bx-t">${w.icon||'🌐'} ${escapeHtml(w.name||'Offerwall')}</div>
+      <button class="bx-open" type="button" onclick="openLink(${jsArg(link)})">${bxT('open')}</button>
+    </div>
+    <div class="bx-hint" style="margin-bottom:8px">${bxT('note')}</div>
+    <div class="bx-frame-wrap">
+      <div class="bx-load" id="bxLoad">${bxT('loading')}</div>
+      <iframe class="bx-frame" src="${escapeHtml(link)}" title="${escapeHtml(w.name||'Offerwall')}"
+        loading="eager" referrerpolicy="no-referrer-when-downgrade"
+        sandbox="allow-scripts allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+        onload="var l=document.getElementById('bxLoad');if(l)l.style.opacity=0"></iframe>
+    </div>
+    <div class="bx-hint">${bxT('hint')}</div>`;
+  };
+})();
