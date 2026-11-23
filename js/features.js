@@ -834,8 +834,8 @@ function buildQuizHomeCard(){
 // ───────────────────────────────────────────────────────────────────────
 // • config.js-এ দুটো সেটিং লাগে (নিচে দেখুন) — না থাকলেও অ্যাপ ভাঙবে না:
 //     CFG.boostSiteLink : 'https://…'   → খালি হলে Boost কার্ড লুকানো থাকে
-//     CFG.wallEmbed     : {w20:true}    → যে wall অ্যাপের ভেতরেই দেখাবে
-//                          (না দিলে শুধু w20 ভেতরে দেখায়; false দিলে আগের মতো নতুন ট্যাব)
+//     CFG.wallIframeLinks : {w20:'https://…'} → যে wall-এর iframe লিংক বসাবেন সেটা অ্যাপের ভেতরে
+//                          দেখাবে; খালি থাকলে আগের মতো ব্রাউজারে (wallLinks)
 // • কার্ডের ছবি নিজে বানাতে চাইলে: icons/boost-card.png (1200×300 PNG) — থাকলে সেটাই
 //   কার্ডে বসবে, না থাকলে সুন্দর ডিফল্ট কার্ড দেখাবে।
 // • এই অংশ আগের কোনো ফাংশন মুছে না — শুধু wrap/override করে।
@@ -916,17 +916,21 @@ function bxInsertAfterHeader(html){
 })();
 
 // ── Wall frame: অফার অ্যাপের ভেতরেই (iframe); উপরে "ব্রাউজারে খুলুন" বাটন ──
-function bxWallEmbedOn(wid){
-  const m = (CFG && CFG.wallEmbed);
-  if(m && typeof m === 'object' && wid in m) return !!m[wid];
-  return wid === 'w20';                       // ডিফল্ট: শুধু FlexMedia (w20)
-}
+// iframe-only wall হলেও Wall ট্যাবে কার্ড দেখাতে wallLinks-এ বসিয়ে দেওয়া (খালি থাকলে)
+(function bxSyncIframeLinks(){
+  const m = CFG && CFG.wallIframeLinks;
+  if(!m || !CFG.wallLinks) return;
+  Object.keys(m).forEach(id => {
+    if(String(m[id]||'').trim() && !String(CFG.wallLinks[id]||'').trim()) CFG.wallLinks[id] = m[id];
+  });
+})();
+function bxIframeLink(wid){ return String((CFG.wallIframeLinks && CFG.wallIframeLinks[wid]) || '').trim(); }
 (function(){
   const _frame = buildWallFramePage;
   window.buildWallFramePage = function(){
     const wid = S.activeWallId;
-    const rawLink = (CFG.wallLinks && CFG.wallLinks[wid]) || '';
-    if(!rawLink || !bxWallEmbedOn(wid)) return _frame();       // আগের আচরণ অক্ষত
+    const rawLink = bxIframeLink(wid);
+    if(!rawLink) return _frame();       // iframe লিংক নেই → আগের আচরণ (বড় কার্ড + Open Full)
     const w = CFG.walls.find(x=>x.id===wid) || {};
     const uid = S.user?.uid || 'guest';
     const param = (CFG.wallSubidParam && CFG.wallSubidParam[wid]) || 'subid';
