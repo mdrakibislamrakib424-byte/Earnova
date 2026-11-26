@@ -822,7 +822,7 @@ function buildQuizPage(){
 // Home পেজের ছোট কার্ড
 function buildQuizHomeCard(){
   return `<button class="hx-qzhome" data-page="quiz">
-    <span class="hx-qzhi">🧠</span>
+    <span class="hx-qzhi"><img class="hx-qzimg" src="icons/home-quiz.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"><b class="hx-qzemo">🧠</b></span>
     <span class="hx-qzht"><b>${T('qzTitle')}</b><small>${T('qzHomeSub').replace('{r}',fmt$(CFG.quizReward))}</small></span>
     <span class="hx-qzhg">›</span>
   </button>`;
@@ -888,7 +888,7 @@ function buildBoostCard(){
   return `<button class="bx-card" type="button" onclick="openLink(${jsArg(link)})">
     <img class="bx-img" src="icons/boost-card.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()">
     <span class="bx-in">
-      <span class="bx-ic">🚀</span>
+      <span class="bx-ic"><img src="icons/home-boost.png" alt="" onload="this.parentNode.classList.add('hasimg')" onerror="this.remove()"><b class="bx-emo">🚀</b></span>
       <span class="bx-tx"><b>${bxT('title')}</b><small>${bxT('sub')}</small></span>
       <span class="bx-go">${bxT('go')} ›</span>
     </span>
