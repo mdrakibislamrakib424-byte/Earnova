@@ -1,4 +1,4 @@
-// ⚠️ ফিক্স: App-এর প্রায় ২২টা জায়গায় সরাসরি `S.page='x';render();` লেখা
+  // ⚠️ ফিক্স: App-এর প্রায় ২২টা জায়গায় সরাসরি `S.page='x';render();` লেখা
 // আছে, navTo() ব্যবহার না করেই (যেমন leaderboard/offers/home-এর অনেক
 // শর্টকাট বাটন) — সেই পথগুলোতে navTo()-এর ভেতরের page-entry-ad চেক
 // একদমই ট্রিগার হতো না। এখানে render()-এ একটা fallback হুক যোগ করা
@@ -823,6 +823,7 @@ function buildQuickActions(){
       ${items.map(it=>`<button class="qa-item" ${it.page?`data-page="${it.page}"`:`id="${it.id}"`}>
         <span class="qa-ic">
           <img src="${it.img}" alt="" loading="lazy"
+            onload="this.parentNode.classList.add('hasimg')"
             onerror="this.style.display='none';this.nextElementSibling.style.display='inline'">
           <span style="display:none">${it.icon}</span>
         </span>
