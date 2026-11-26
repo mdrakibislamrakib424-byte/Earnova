@@ -955,3 +955,19 @@ function bxIframeLink(wid){ return String((CFG.wallIframeLinks && CFG.wallIframe
     <div class="bx-hint">${bxT('hint')}</div>`;
   };
 })();
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🖼️ SOCIAL TASK আইকন (update 20): বক্স ছাড়া বড় ছবি + ফাইলের নামে ভুল থাকলেও কাজ করে
+//   config.js-এ 'facebook.png' / 'instagram.png' লেখা, কিন্তু repo-তে ফাইল 'fecbook.png' /
+//   'instragram.png' — তাই প্রথমে config-এর নাম, না পেলে এই বিকল্প নাম চেষ্টা করে।
+// ═══════════════════════════════════════════════════════════════════════
+window.stIconHtml = function(t, size){
+  const logo = CFG.socialLogo && CFG.socialLogo[t.platform];
+  const fb = escapeHtml(t.icon||'📱');
+  if(!logo) return fb;
+  const alt = ({facebook:'fecbook.png', instagram:'instragram.png'})[t.platform] || '';
+  return `<img src="${escapeHtml(logo)}" alt="" ${alt?`data-alt="${alt}"`:''} style="width:${size}px;height:${size}px;object-fit:contain"
+    onload="this.parentNode.classList.add('hasimg')"
+    onerror="if(this.dataset.alt){var a=this.dataset.alt;this.dataset.alt='';this.src=a;}else{this.parentNode.classList.remove('hasimg');this.parentNode.textContent='📱';}">`;
+};
