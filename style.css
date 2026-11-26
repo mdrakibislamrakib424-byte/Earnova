@@ -1480,3 +1480,25 @@ body.dark .wd-conv b{color:#066a4a}
 .qa-item:nth-child(3) .qa-ic img{animation-delay:-1.6s}
 .qa-item:nth-child(4) .qa-ic img{animation-delay:-2.4s}
 @media (prefers-reduced-motion:reduce){.qa-ic.hasimg img,.hx-qzhi.hasimg img,.bx-ic.hasimg img,.tk-ic.hasimg img,.tk-hero-ic.hasimg img{animation:none}}
+
+/* ═══════════ SKIN SYSTEM (update 22) — কার্ড/পেজের নিজস্ব ছবি ═══════════ */
+body.ez-pgbg::before{content:'';position:fixed;left:0;right:0;top:0;bottom:0;z-index:0;pointer-events:none;
+  background:var(--ez-pg) center top/cover no-repeat}
+body.ez-pgbg #app{position:relative;z-index:1}
+html body .ez-sk.ez-sk{
+  background-image:linear-gradient(rgba(var(--ez-ov,255,255,255),var(--ez-ova,.10)),rgba(var(--ez-ov,255,255,255),var(--ez-ova,.10))),var(--ez-sk)!important;
+  background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;
+  box-shadow:0 12px 26px rgba(25,45,120,.24),0 3px 8px rgba(25,45,120,.14)!important;
+}
+body.dark .ez-sk{--ez-ov:8,14,30;--ez-ova:.22}
+body.dark .ez-sk.ez-sk{box-shadow:0 14px 28px rgba(0,0,0,.55),0 3px 8px rgba(0,0,0,.35)!important}
+html body .hx-nav.ez-sk{box-shadow:0 8px 20px rgba(0,0,0,.22)!important}
+html body .bnav.ez-sk{box-shadow:0 -8px 20px rgba(0,0,0,.2)!important}
+html body .home-top-glow.ez-sk,html body .profile-top-glow.ez-sk{box-shadow:none!important}
+@keyframes ezSkFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+.ez-sk.ez-float{animation:ezSkFloat 5.5s ease-in-out infinite;will-change:transform}
+@media (prefers-reduced-motion:reduce){.ez-sk.ez-float{animation:none}}
+/* স্কিন ছবির উপরে ডার্ক মোডে লেখা হালকা রঙে (গাঢ় ছবির জন্য) */
+body.dark .ez-sk .card-hd,body.dark .ez-sk .qa-lb,body.dark .ez-sk .ra-t,body.dark .ez-sk .ra-s,body.dark .ez-sk .tk-title,
+body.dark .ez-sk .tk-meta,body.dark .ez-sk .uof-title,body.dark .ez-sk .uof-desc,body.dark .ez-sk .faq-ans,body.dark .ez-sk .lbl,
+body.dark .ez-sk .ps,body.dark .ez-sk .pt,body.dark .ez-sk .mu,body.dark .ez-sk.card{color:#eef3ff!important}
