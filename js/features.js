@@ -971,3 +971,305 @@ window.stIconHtml = function(t, size){
     onload="this.parentNode.classList.add('hasimg')"
     onerror="if(this.dataset.alt){var a=this.dataset.alt;this.dataset.alt='';this.src=a;}else{this.parentNode.classList.remove('hasimg');this.parentNode.textContent='📱';}">`;
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🖼️ SKIN SYSTEM (update 22) — প্রতিটা পেজের ব্যাকগ্রাউন্ড ও প্রতিটা কার্ডে নিজের ছবি বসানো
+// ───────────────────────────────────────────────────────────────────────
+// • ছবি বসানোর নিয়ম: GitHub-এ  icons/skins/<নাম>.webp  (বা .png / .jpg) আপলোড করলেই কাজ করবে।
+//   Dark mode-এর আলাদা ছবি চাইলে  <নাম>-dark.webp ; না দিলে সাধারণ ছবিটাই দুই মোডে দেখাবে।
+// • ছবি না থাকলে আগের ডিজাইন হুবহু থাকবে — কিছুই ভাঙবে না।
+// • সব নামের তালিকা: SKIN_GUIDE.txt (এই ফাইলের সাথে দেওয়া)।
+// • পেজ ব্যাকগ্রাউন্ডের নাম:  bg-<পেজ>   (যেমন bg-home, bg-social)
+// • কার্ডের নাম: নিচের SKIN_SLOTS-এর  k  (যেমন home-quiz, social-task)
+// ═══════════════════════════════════════════════════════════════════════
+const SKIN_DIR = 'icons/skins/';
+const SKIN_EXT = ['webp','png','jpg'];
+const SKIN_PAGES = ['home','wallet','offers','referral','offerwall','profile','notices','faq','social','leaderboard','spin','quiz','unlock','wallview','wallframe'];
+function _skq(r,s){ return Array.from(r.querySelectorAll(s)); }
+function _skCard(r,s){ return _skq(r,s).map(e=>e.closest('.card')).filter(Boolean); }
+function _skNth(r,s,n){ const a=_skq(r,s); return a[n]?[a[n]]:[]; }
+// float:true = কার্ড সামান্য ভাসবে (ফর্ম/লিস্ট কার্ডে নয়)
+const SKIN_SLOTS = [
+  // ── HOME ──
+  {k:'home-header',   pg:'home', find:r=>_skq(r,'.home-top-glow')},
+  {k:'home-hero',     pg:'home', find:r=>_skq(r,'.hx-wrap'),               float:true},
+  {k:'home-quick',    pg:'home', find:r=>_skCard(r,'.qa-grid'),            float:true},
+  {k:'home-quiz',     pg:'home', find:r=>_skq(r,'.hx-qzhome'),             float:true},
+  {k:'home-boost',    pg:'home', find:r=>_skq(r,'.bx-card'),               float:true},
+  {k:'home-activity', pg:'home', find:r=>_skNth(r,'#pgContent > .card',1), float:true},
+  {k:'home-news',     pg:'home', find:r=>_skNth(r,'#pgContent > .card',2), float:true},
+  {k:'home-ticker',   pg:'home', find:r=>_skq(r,'#payoutTicker')},
+  {k:'home-level',    pg:'home', find:r=>_skCard(r,'.lvl-bar-wrap'),       float:true},
+  {k:'home-leaders',  pg:'home', find:r=>_skCard(r,'#lbPreview'),          float:true},
+  {k:'home-offers',   pg:'home', find:r=>_skCard(r,'#homeOfferPreview'),   float:true},
+  // ── WALLET ──
+  {k:'wallet-plate',  pg:'wallet', find:r=>_skq(r,'.hx-plate'),            float:true},
+  {k:'wallet-form',   pg:'wallet', find:r=>_skCard(r,'#wdAmt')},
+  {k:'wallet-history',pg:'wallet', find:r=>_skq(r,'#wdHist')},
+  // ── OFFERS ──
+  {k:'offers-hero',   pg:'offers', find:r=>_skq(r,'.uof-hero'),            float:true},
+  {k:'offers-search', pg:'offers', find:r=>_skq(r,'.uof-search-wrap')},
+  {k:'offers-item',   pg:'offers', find:r=>_skq(r,'#offersFeed > *')},
+  // ── REFERRAL ──
+  {k:'referral-plate',pg:'referral', find:r=>_skq(r,'.hx-plate'),          float:true},
+  {k:'referral-stat', pg:'referral', find:r=>_skq(r,'.hx-stat'),           float:true},
+  {k:'referral-card', pg:'referral', find:r=>_skq(r,'#pgContent > .card.mb12')},
+  // ── WALL (অফারওয়াল লিস্ট) ──
+  {k:'wall-item',     pg:'offerwall', find:r=>_skq(r,'#wallCardsGrid .ofc-grid > *')},
+  {k:'wallview-card', pg:'wallview', find:r=>_skq(r,'#pgContent > .card')},
+  {k:'wallframe-card',pg:'wallframe',find:r=>_skq(r,'#pgContent > .card, #pgContent > div[style*="gradient"]')},
+  {k:'unlock-card',   pg:'unlock', find:r=>_skq(r,'#unlockCard')},
+  // ── PROFILE ──
+  {k:'profile-header',pg:'profile', find:r=>_skq(r,'.profile-top-glow')},
+  {k:'profile-avatar',pg:'profile', find:r=>_skq(r,'.profile-avatar-card'),float:true},
+  {k:'profile-stat',  pg:'profile', find:r=>_skq(r,'.hx-stat'),           float:true},
+  {k:'profile-level', pg:'profile', find:r=>_skCard(r,'.lvl-bar-wrap'),   float:true},
+  {k:'profile-edit',  pg:'profile', find:r=>_skCard(r,'#prfNm')},
+  {k:'profile-kyc',   pg:'profile', find:r=>_skCard(r,'#kycName')},
+  // ── NOTICES / FAQ ──
+  {k:'notices-item',  pg:'notices', find:r=>_skq(r,'#noticesList > *')},
+  {k:'faq-item',      pg:'faq', find:r=>_skq(r,'#pgContent > .card')},
+  // ── SOCIAL ──
+  {k:'social-search', pg:'social', find:r=>_skq(r,'.tk-searchbox')},
+  {k:'social-task',   pg:'social', find:r=>_skq(r,'.tk-row')},
+  {k:'social-my',     pg:'social', find:r=>_skCard(r,'#mySubmissions')},
+  // ── LEADERBOARD / SPIN / QUIZ ──
+  {k:'leaderboard-card', pg:'leaderboard', find:r=>_skCard(r,'#lbContent')},
+  {k:'spin-plate',    pg:'spin', find:r=>_skq(r,'.hx-plate'),             float:true},
+  {k:'quiz-head',     pg:'quiz', find:r=>_skq(r,'.hx-qzhead')},
+  {k:'quiz-card',     pg:'quiz', find:r=>_skq(r,'.hx-qz')},
+  // ── সব পেজে ──
+  {k:'nav-bottom',    pg:'*', find:r=>_skq(document,'.bnav')},
+  {k:'nav-top',       pg:'*', find:r=>_skq(document,'.nav')},
+];
+
+const _skCache = new Map();            // "key|dark" → url | null
+function _skProbe(key, dark){
+  const ck = key + '|' + (dark?1:0);
+  if(_skCache.has(ck)) return _skCache.get(ck);
+  const tryList = [];
+  if(dark) SKIN_EXT.forEach(e=>tryList.push(`${SKIN_DIR}${key}-dark.${e}`));
+  SKIN_EXT.forEach(e=>tryList.push(`${SKIN_DIR}${key}.${e}`));
+  const p = (async()=>{
+    for(const u of tryList){
+      const ok = await new Promise(res=>{ const im=new Image(); im.onload=()=>res(true); im.onerror=()=>res(false); im.src=u; });
+      if(ok) return u;
+    }
+    return null;
+  })();
+  _skCache.set(ck, p);
+  return p;
+}
+
+let _skBusy = false, _skAgain = false;
+async function ezApplySkins(){
+  if(_skBusy){ _skAgain = true; return; }
+  _skBusy = true;
+  try{
+    const root = document.getElementById('pgContent');
+    const scr  = document.getElementById('scr');
+    const dark = document.body.classList.contains('dark');
+    if(!root || !scr) return;
+    // পেজ ব্যাকগ্রাউন্ড
+    const pgUrl = await _skProbe('bg-'+S.page, dark);
+    if(pgUrl){ scr.classList.add('pgskin'); scr.style.setProperty('--pg-img',`url("${pgUrl}")`); }
+    else { scr.classList.remove('pgskin'); scr.style.removeProperty('--pg-img'); }
+    // কার্ড
+    for(const sl of SKIN_SLOTS){
+      if(sl.pg!=='*' && sl.pg!==S.page) continue;
+      let els=[]; try{ els = sl.find(root) || []; }catch(e){}
+      if(!els.length) continue;
+      const url = await _skProbe(sl.k, dark);
+      els.forEach(el=>{
+        if(url){
+          el.classList.add('skin-on');
+          el.style.setProperty('--skin-img',`url("${url}")`);
+          if(sl.float && !el.querySelector('input,textarea,select')) el.classList.add('skin-float');
+        } else {
+          el.classList.remove('skin-on','skin-float');
+          el.style.removeProperty('--skin-img');
+        }
+      });
+    }
+  } finally {
+    _skBusy = false;
+    if(_skAgain){ _skAgain = false; setTimeout(ezApplySkins, 0); }
+  }
+}
+(function ezSkinBoot(){
+  // renderApp-এর পর
+  const _ra = renderApp;
+  window.renderApp = function(){ const r = _ra.apply(this, arguments); setTimeout(ezApplySkins, 0); return r; };
+  // পরে লোড হওয়া কার্ড (সোশ্যাল টাস্ক, অফার লিস্ট…) — debounce
+  let t = null;
+  const start = () => {
+    const app = document.getElementById('app'); if(!app) return;
+    new MutationObserver(()=>{ clearTimeout(t); t = setTimeout(ezApplySkins, 150); }).observe(app,{childList:true,subtree:true});
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
+
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🖼️ SKIN SYSTEM (update 22) — প্রতিটা পেজের ব্যাকগ্রাউন্ড ও প্রতিটা কার্ডে নিজের ছবি
+// ───────────────────────────────────────────────────────────────────────
+// • ছবি রাখুন:  icons/skins/<নাম>.webp  (বা .png)      — নামের তালিকা: SKIN_GUIDE.txt
+// • ডার্ক মোডে আলাদা ছবি:  <নাম>-dark.webp   (না থাকলে লাইটের ছবিই চলে)
+// • ছবি না থাকলে কার্ড/পেজ ঠিক আগের মতোই থাকে — কিছু ভাঙে না।
+// • পেজ ব্যাকগ্রাউন্ড:  page-home, page-wallet … ; সব পেজের জন্য একটাই:  page-all
+// • config.js-এ লাগলে বদলানো যায় (না থাকলেও চলে):
+//     skins:{ dir:'icons/skins/', ext:['webp','png'], enabled:true }
+// ═══════════════════════════════════════════════════════════════════════
+const EZ_SK = (function(){
+  const cfg = (typeof CFG!=='undefined' && CFG.skins) || {};
+  return {
+    on:  cfg.enabled !== false,
+    dir: cfg.dir || 'icons/skins/',
+    ext: Array.isArray(cfg.ext) && cfg.ext.length ? cfg.ext : ['webp','png'],
+  };
+})();
+const _ezSkCache = {};   // url → true/false/'pending'
+function ezSkProbe(url, cb){
+  const c = _ezSkCache[url];
+  if(c === true || c === false){ cb(c); return; }
+  if(c && c.length !== undefined){ c.push(cb); return; }       // pending list
+  _ezSkCache[url] = [cb];
+  const im = new Image();
+  const done = ok => { const l = _ezSkCache[url]; _ezSkCache[url] = ok; l.forEach(f=>{ try{f(ok)}catch(e){} }); };
+  im.onload  = () => done(true);
+  im.onerror = () => done(false);
+  im.src = url;
+}
+// নামের জন্য প্রথম যে ছবিটা পাওয়া যায় (dark হলে আগে -dark, তারপর সাধারণ; ext একে একে)
+function ezSkResolve(key, cb){
+  const dark = document.body.classList.contains('dark');
+  const names = dark ? [key+'-dark', key] : [key];
+  const urls = []; names.forEach(n => EZ_SK.ext.forEach(e => urls.push(EZ_SK.dir + n + '.' + e)));
+  let i = 0;
+  (function next(){
+    if(i >= urls.length){ cb(null); return; }
+    const u = urls[i++];
+    ezSkProbe(u, ok => ok ? cb(u) : next());
+  })();
+}
+
+// কোন কার্ড কোন নামে — [নাম, পেজ, CSS selector, ঐচ্ছিক ফিল্টার]
+const EZ_SK_RULES = [
+  ['top-nav',        '*',          '.hx-nav'],
+  ['bottom-nav',     '*',          '.bnav'],
+  // Home
+  ['home-header',    'home',       '.home-top-glow'],
+  ['home-hero',      'home',       '.hx-sv'],
+  ['home-quick',     'home',       '.card.mb12', el => !!el.querySelector('.qa-grid')],
+  ['home-quiz',      'home',       '.hx-qzhome'],
+  ['home-boost',     'home',       '.bx-card'],
+  ['home-level',     'home',       '.card.mb12', el => !!el.querySelector('.lvl-bar-wrap')],
+  // Wallet / Referral / Spin / Quiz
+  ['wallet-balance', 'wallet',     '.hx-plate'],
+  ['wallet-form',    'wallet',     '.card'],
+  ['ref-code',       'referral',   '.hx-plate'],
+  ['ref-stat',       'referral',   '.hx-stat'],
+  ['ref-how',        'referral',   '.card.mb12'],
+  ['spin-card',      'spin',       '.hx-plate'],
+  ['quiz-head',      'quiz',       '.hx-qzhead'],
+  ['quiz-card',      'quiz',       '.hx-qzcard'],
+  // Offers / Wall
+  ['offers-hero',    'offers',     '.uof-hero'],
+  ['offers-search',  'offers',     '.uof-search-wrap'],
+  ['offers-item',    'offers',     '.uof-card'],
+  ['wall-card',      'offerwall',  '.ofc'],
+  ['unlock-ad',      'unlock',     '.card', (el,i)=> i===0],
+  ['unlock-how',     'unlock',     '.card.mt12'],
+  ['wallview-card',  'wallview',   '.card'],
+  ['wallframe-card', 'wallframe',  '#pgContent > div:nth-child(2) > div:nth-child(1)'],
+  // Social
+  ['social-search',  'social',     '.tk-searchbox'],
+  ['social-task',    'social',     '.tk-row'],
+  ['social-hero',    'social',     '.tk-hero'],
+  ['social-mine',    'social',     '.card.mt12'],
+  // Profile
+  ['profile-top',    'profile',    '.profile-top-glow'],
+  ['profile-avatar', 'profile',    '.profile-avatar-card'],
+  ['profile-stat',   'profile',    '.hx-stat'],
+  // FAQ / Leaderboard
+  ['faq-item',       'faq',        '.card'],
+  ['leaders-card',   'leaderboard','.card.mb12'],
+];
+// ক্রমানুযায়ী (order) কার্ড — সংখ্যা মিললে তবেই নাম বসে, না মিললে কিছু করে না (নিরাপদ)
+const EZ_SK_ORDERED = [
+  { page:'home',    sel:'.card.mb12', skip:el=>el.querySelector('.qa-grid')||el.querySelector('.lvl-bar-wrap'),
+    names:['home-recent','home-news','home-leaders','home-live'] },
+  { page:'profile', sel:'.card.mb12', skip:el=>el.classList.contains('profile-avatar-card'),
+    names:['profile-level','profile-settings','profile-language','profile-identity','profile-notify'] },
+];
+// শুধু shadow (ভাসা ভাব) — লিস্টের আইটেম; বাকিগুলো খুব হালকা ভাসে
+const EZ_SK_LIFT_ONLY = new Set(['offers-item','social-task','faq-item','wall-card','profile-stat','ref-stat','top-nav','bottom-nav','home-header','profile-top']);
+
+function ezSkSet(el, key){
+  if(!el || !key) return;
+  if(el.getAttribute('data-ezkey') === key + (document.body.classList.contains('dark')?'~d':'~l') && el.classList.contains('ez-sk')) return;
+  ezSkResolve(key, url => {
+    const tag = key + (document.body.classList.contains('dark')?'~d':'~l');
+    if(!url){ if(el.classList.contains('ez-sk') && (el.getAttribute('data-ezkey')||'').split('~')[0]===key){
+        el.classList.remove('ez-sk','ez-float','ez-lift'); el.style.removeProperty('--ez-sk'); el.removeAttribute('data-ezkey'); }
+      return; }
+    el.style.setProperty('--ez-sk', 'url("' + url + '")');
+    el.setAttribute('data-ezkey', tag);
+    el.classList.add('ez-sk');
+    const lift = EZ_SK_LIFT_ONLY.has(key) || key.indexOf('wall-w')===0;
+    el.classList.toggle('ez-lift', lift);
+    el.classList.toggle('ez-float', !lift);
+    if(!lift && !el.style.animationDelay) el.style.animationDelay = (-Math.random()*5).toFixed(2) + 's';
+  });
+}
+
+let _ezSkTimer = null;
+function ezSkApply(){
+  if(!EZ_SK.on) return;
+  const root = document.getElementById('app'); if(!root) return;
+  const pg = (typeof S!=='undefined' && S.page) || 'home';
+  // 1) পেজ ব্যাকগ্রাউন্ড (পুরো স্ক্রিন, স্ক্রল করলেও স্থির)
+  const bd = document.body;
+  const setPg = u => { if(u){ bd.style.setProperty('--ez-pg','url("'+u+'")'); bd.classList.add('ez-pgbg'); }
+                       else { bd.classList.remove('ez-pgbg'); bd.style.removeProperty('--ez-pg'); } };
+  ezSkResolve('page-' + pg, u1 => { if(u1) setPg(u1); else ezSkResolve('page-all', setPg); });
+  // 2) কার্ড
+  EZ_SK_RULES.forEach(r => {
+    const key = r[0], page = r[1], sel = r[2], flt = r[3];
+    if(page !== '*' && page !== pg) return;
+    let i = 0;
+    root.querySelectorAll(sel).forEach(el => {
+      const idx = i++;
+      if(flt && !flt(el, idx)) return;
+      if(key === 'wall-card'){
+        const wid = el.getAttribute('data-goto-wall');
+        // নির্দিষ্ট wall-এর ছবি থাকলে সেটা, না থাকলে সাধারণ wall-card
+        ezSkResolve('wall-' + wid, u => { if(u) ezSkSet(el, 'wall-' + wid); else ezSkSet(el, 'wall-card'); });
+        return;
+      }
+      ezSkSet(el, key);
+    });
+  });
+  EZ_SK_ORDERED.forEach(g => {
+    if(g.page !== pg) return;
+    const list = Array.prototype.filter.call(root.querySelectorAll(g.sel), el => !g.skip(el));
+    if(list.length === g.names.length) list.forEach((el,i) => ezSkSet(el, g.names[i]));
+  });
+}
+function ezSkSchedule(){ clearTimeout(_ezSkTimer); _ezSkTimer = setTimeout(ezSkApply, 60); }
+
+(function ezSkBoot(){
+  if(!EZ_SK.on) return;
+  const start = () => {
+    const app = document.getElementById('app');
+    if(!app){ setTimeout(start, 200); return; }
+    new MutationObserver(ezSkSchedule).observe(app, {childList:true, subtree:true});       // রেন্ডার/লিস্ট লোড
+    new MutationObserver(() => {                                                          // লাইট/ডার্ক বদল
+      document.querySelectorAll('.ez-sk').forEach(e => e.removeAttribute('data-ezkey'));
+      ezSkSchedule();
+    }).observe(document.body, {attributes:true, attributeFilter:['class']});
+    ezSkSchedule();
+  };
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
