@@ -476,7 +476,7 @@ const CFG = {
     w16:'', w17:'', w18:'', w19:'', w20:'',
   },
   wallLinks:{
-    w1:'',  w2:'',  w3:'',  w4:'',  w5:'',
+    w1:'https://earn-zone349.github.io/Earnova-boost/cpagrip-wall.html',  w2:'',  w3:'',  w4:'',  w5:'',
     w6:'',  w7:'',  w8:'',  w9:'',  w10:'',
     w11:'', w12:'https://earn.wannads.com/wall?apiKey=6ab98011d2882365815928', w13:'', w14:'', w15:'',
     w16:'', w17:'', w18:'', w19:'', w20:'https://flexmediax.link/wall?uid=414&wall=p0J6xdNrmQ',
