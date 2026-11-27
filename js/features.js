@@ -1135,3 +1135,24 @@ function ezSkSchedule(){ clearTimeout(_ezSkTimer); _ezSkTimer = setTimeout(ezSkA
   };
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();
+
+/* ══════════════════════════════════════════════════════════
+   update23 — CPAGrip wall পেজে অ্যাপের ভাষা + থিম পাঠানো
+   (শুধু cpagrip-wall.html লিংকে &lang=…&theme=… জুড়ে দেয়; বাকি সব লিংক আগের মতো)
+   ══════════════════════════════════════════════════════════ */
+(function(){
+  if(window.__ezWallLT) return; window.__ezWallLT = true;
+  const _open = window.openLink;
+  if(typeof _open !== 'function') return;
+  window.openLink = function(url){
+    try{
+      let u = String(url||'');
+      if(/cpagrip-wall\.html/i.test(u) && !/[?&]lang=/.test(u)){
+        const lang  = (window.S && S.lang) || 'en';
+        const dark  = document.body.classList.contains('dark');
+        u += (u.includes('?')?'&':'?') + 'lang=' + encodeURIComponent(lang) + '&theme=' + (dark?'dark':'light');
+      }
+      return _open.call(this, u);
+    }catch(e){ return _open.call(this, url); }
+  };
+})();
