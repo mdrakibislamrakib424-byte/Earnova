@@ -1147,8 +1147,10 @@ function ezSkSchedule(){ clearTimeout(_ezSkTimer); _ezSkTimer = setTimeout(ezSkA
   window.openLink = function(url){
     try{
       let u = String(url||'');
-      if(/cpagrip-wall\.html/i.test(u) && !/[?&]lang=/.test(u)){
-        const lang  = (window.S && S.lang) || 'en';
+      const w1 = String((typeof CFG !== 'undefined' && CFG && CFG.wallLinks && CFG.wallLinks.w1) || '').split('?')[0];
+      const isCpa = /cpagrip-wall\.html|\/cpagrip-offar-wall/i.test(u) || (w1 && u.indexOf(w1) === 0);
+      if(isCpa && !/[?&]lang=/.test(u)){
+        const lang  = (typeof S !== 'undefined' && S && S.lang) || 'en';
         const dark  = document.body.classList.contains('dark');
         u += (u.includes('?')?'&':'?') + 'lang=' + encodeURIComponent(lang) + '&theme=' + (dark?'dark':'light');
       }
